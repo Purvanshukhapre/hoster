@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { authAPI } from '../services/api';
-import { mockUsers } from '../contexts/mockUsers';
 
 const ManageUsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -43,8 +42,8 @@ const ManageUsersPage = () => {
       
       // Check if it's a 404 error (endpoint doesn't exist)
       if (error.status === 404 || error.code === 'ERR_BAD_REQUEST') {
-        setMessage('User management API not available, using mock data');
-        setUsers(mockUsers);
+        setMessage('User management API not available');
+        setUsers([]);
       } else {
         setMessage('Error loading users: ' + error.message);
         setUsers([]);
@@ -82,7 +81,7 @@ const ManageUsersPage = () => {
       if (error.status === 404 || error.code === 'ERR_BAD_REQUEST') {
         setMessage('User add API not available, adding to local data');
         
-        // Add locally in mock data
+        // Add locally
         const newLocalUser = {
           id: Date.now(), // generate a temporary ID
           name: newUser.name,
@@ -124,7 +123,7 @@ const ManageUsersPage = () => {
       if (error.status === 404 || error.code === 'ERR_BAD_REQUEST') {
         setMessage('User update API not available, updating local data');
         
-        // Update locally in mock data
+        // Update locally
         setUsers(prev => prev.map(user => 
           (user._id === editingUser._id || user.id === editingUser.id) ? { ...user, ...editUserData } : user
         ));
@@ -154,7 +153,7 @@ const ManageUsersPage = () => {
         if (error.status === 404 || error.code === 'ERR_BAD_REQUEST') {
           setMessage('User delete API not available, removing from local data');
           
-          // Delete locally in mock data
+          // Delete locally
           setUsers(prev => prev.filter(user => (user._id || user.id) !== userId));
         } else {
           setMessage('Error deleting user: ' + error.message);

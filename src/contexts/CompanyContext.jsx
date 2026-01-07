@@ -1,5 +1,4 @@
 import React, { createContext, useReducer, useEffect } from 'react';
-import { mockCompanies } from '../data/mockData';
 import { companyAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -145,21 +144,21 @@ export const CompanyProvider = ({ children }) => {
             // If response.data is already an array
             companiesData = response.data;
           } else {
-            // Fallback to mock data if response format is unexpected
-            console.warn('Unexpected API response format, using mock data');
-            companiesData = mockCompanies;
+            // Use empty array if response format is unexpected
+            console.warn('Unexpected API response format');
+            companiesData = [];
           }
           
           dispatch({ type: 'SET_COMPANIES', payload: companiesData });
         } catch (error) {
           console.error('Error initializing data:', error);
-          // Fallback to mock data
-          dispatch({ type: 'SET_COMPANIES', payload: mockCompanies });
+          // Use empty array
+          dispatch({ type: 'SET_COMPANIES', payload: [] });
         }
       } else {
-        // If user is not authenticated, set loading to false and use mock data
+        // If user is not authenticated, set loading to false
         dispatch({ type: 'SET_LOADING', payload: false });
-        dispatch({ type: 'SET_COMPANIES', payload: mockCompanies });
+        dispatch({ type: 'SET_COMPANIES', payload: [] });
       }
     };
     
@@ -213,7 +212,7 @@ export const CompanyProvider = ({ children }) => {
     // Only fetch data if user is authenticated
     if (!user) {
       dispatch({ type: 'SET_LOADING', payload: false });
-      dispatch({ type: 'SET_COMPANIES', payload: mockCompanies });
+      dispatch({ type: 'SET_COMPANIES', payload: [] });
       return;
     }
     
@@ -231,9 +230,9 @@ export const CompanyProvider = ({ children }) => {
         // If response.data is already an array
         companiesData = response.data;
       } else {
-        // Fallback to mock data if response format is unexpected
-        console.warn('Unexpected API response format, using mock data');
-        companiesData = mockCompanies;
+        // Use empty array if response format is unexpected
+        console.warn('Unexpected API response format');
+        companiesData = [];
       }
       
       // Normalize the companies data before storing
@@ -241,8 +240,8 @@ export const CompanyProvider = ({ children }) => {
       dispatch({ type: 'SET_COMPANIES', payload: normalizedCompanies });
     } catch (error) {
       console.error('Error fetching companies:', error);
-      // Fallback to mock data
-      dispatch({ type: 'SET_COMPANIES', payload: mockCompanies });
+      // Use empty array
+      dispatch({ type: 'SET_COMPANIES', payload: [] });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
@@ -270,9 +269,9 @@ export const CompanyProvider = ({ children }) => {
         // If response.data is already an array
         companiesData = updatedResponse.data;
       } else {
-        // Fallback to mock data if response format is unexpected
-        console.warn('Unexpected API response format, using mock data');
-        companiesData = mockCompanies;
+        // Use empty array if response format is unexpected
+        console.warn('Unexpected API response format');
+        companiesData = [];
       }
       
       // Normalize the companies data before storing
