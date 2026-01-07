@@ -7,13 +7,12 @@ export const mockCompanies = [
     email: 'contact@techinnovations.com',
     industry: 'Software Development',
     description: 'Leading software development company specializing in enterprise solutions.',
-    tags: ['React', 'Node.js', 'Cloud'],
     status: 'New',
     dateAdded: '2024-01-15',
     lastContacted: null,
     responses: [],
     requirements: null,
-    notes: 'Potential for large-scale project',
+    document: null,
     isShortlisted: false
   },
   {
@@ -23,13 +22,12 @@ export const mockCompanies = [
     email: 'info@datasystems.co',
     industry: 'Data Analytics',
     description: 'Specializes in big data analytics and business intelligence solutions.',
-    tags: ['Python', 'AI', 'Machine Learning'],
     status: 'Contacted',
     dateAdded: '2024-01-18',
     lastContacted: '2024-01-20',
     responses: [],
     requirements: null,
-    notes: 'Waiting for their response',
+    document: null,
     isShortlisted: false
   },
   {
@@ -39,7 +37,6 @@ export const mockCompanies = [
     email: 'hello@cloudsolutions.net',
     industry: 'Cloud Services',
     description: 'Provides cloud infrastructure and migration services.',
-    tags: ['AWS', 'Azure', 'DevOps'],
     status: 'Responded',
     dateAdded: '2024-01-10',
     lastContacted: '2024-01-12',
@@ -58,7 +55,7 @@ export const mockCompanies = [
       budget: '$80k - $120k',
       notes: 'Looking for experienced professionals with 5+ years experience'
     },
-    notes: 'Strong technical team',
+    document: null,
     isShortlisted: true
   },
   {
@@ -68,7 +65,6 @@ export const mockCompanies = [
     email: 'partnerships@mobilefirst.io',
     industry: 'Mobile Development',
     description: 'Mobile app development studio with focus on user experience.',
-    tags: ['React Native', 'iOS', 'Android'],
     status: 'Shortlisted',
     dateAdded: '2024-01-05',
     lastContacted: '2024-01-07',
@@ -87,7 +83,7 @@ export const mockCompanies = [
       budget: '$60k - $80k',
       notes: 'Need team members with design thinking experience'
     },
-    notes: 'Excellent portfolio of apps',
+    document: null,
     isShortlisted: true
   },
   {
@@ -97,13 +93,12 @@ export const mockCompanies = [
     email: 'research@airesearchlabs.org',
     industry: 'Artificial Intelligence',
     description: 'Cutting-edge AI research and development for enterprise applications.',
-    tags: ['Machine Learning', 'NLP', 'Computer Vision'],
     status: 'New',
     dateAdded: '2024-01-22',
     lastContacted: null,
     responses: [],
     requirements: null,
-    notes: 'Recently funded startup with strong research team',
+    document: null,
     isShortlisted: false
   }
 ];

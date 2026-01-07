@@ -1,32 +1,93 @@
 import './index.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CompanyProvider } from './contexts/CompanyContext';
+import { AuthProvider } from './contexts/AuthContext';
 import MainLayout from './layouts/MainLayout';
+import ProtectedRoute from './components/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import CompanyDetailsPage from './pages/CompanyDetailsPage';
 import DashboardPage from './pages/DashboardPage';
 import CompaniesPage from './pages/CompaniesPage';
 import AddCompanyPage from './pages/AddCompanyPage';
 import ComposeEmailPage from './pages/ComposeEmailPage';
-import ResponsesPage from './pages/ResponsesPage';
-import RequirementsPage from './pages/RequirementsPage';
+
 import ShortlistedPage from './pages/ShortlistedPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import EmailTrackerPage from './pages/EmailTrackerPage';
+import UserProfilePage from './pages/UserProfilePage';
+import ManageUsersPage from './pages/ManageUsersPage';
 
 function App() {
   return (
-    <CompanyProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<MainLayout><DashboardPage /></MainLayout>} />
-          <Route path="/companies" element={<MainLayout><CompaniesPage /></MainLayout>} />
-          <Route path="/add-company" element={<MainLayout><AddCompanyPage /></MainLayout>} />
-          <Route path="/compose-email" element={<MainLayout><ComposeEmailPage /></MainLayout>} />
-          <Route path="/responses" element={<MainLayout><ResponsesPage /></MainLayout>} />
-          <Route path="/requirements" element={<MainLayout><RequirementsPage /></MainLayout>} />
-          <Route path="/analytics" element={<MainLayout><AnalyticsPage /></MainLayout>} />
-          <Route path="/shortlisted" element={<MainLayout><ShortlistedPage /></MainLayout>} />
-        </Routes>
-      </Router>
-    </CompanyProvider>
+    <AuthProvider>
+      <CompanyProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={
+              <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                <MainLayout><DashboardPage /></MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard" element={
+              <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                <MainLayout><DashboardPage /></MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/companies" element={
+              <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                <MainLayout><CompaniesPage /></MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/companies/:id" element={
+              <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                <MainLayout><CompanyDetailsPage /></MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/add-company" element={
+              <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                <MainLayout><AddCompanyPage /></MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/edit-company/:id" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <MainLayout><AddCompanyPage isEdit={true} /></MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/compose-email" element={
+              <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                <MainLayout><ComposeEmailPage /></MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/email-tracker" element={
+              <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                <MainLayout><EmailTrackerPage /></MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                <MainLayout><AnalyticsPage /></MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/shortlisted" element={
+              <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                <MainLayout><ShortlistedPage /></MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute allowedRoles={['admin', 'employee']}>
+                <MainLayout><UserProfilePage /></MainLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/manage-users" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <MainLayout><ManageUsersPage /></MainLayout>
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </Router>
+      </CompanyProvider>
+    </AuthProvider>
   );
 }
 

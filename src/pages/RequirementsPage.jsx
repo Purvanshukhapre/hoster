@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeftIcon, PlusIcon, MinusIcon, DocumentTextIcon, UserIcon, BriefcaseIcon, CurrencyDollarIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 
 const RequirementsPage = () => {
-  const { companies, addRequirements } = useCompanyContext();
+  const { companies, addRequirements, loading } = useCompanyContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const companyId = searchParams.get('companyId');
@@ -133,6 +133,18 @@ const RequirementsPage = () => {
     setIsEditing(false);
   };
 
+  // Show loading state while data is being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading requirements...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
@@ -237,7 +249,7 @@ const RequirementsPage = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Required Roles */}
               <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center">
+                <label className="text-sm font-medium text-gray-700 mb-3 flex items-center">
                   <UserIcon className="h-4 w-4 text-blue-500 mr-2" />
                   Required Roles *
                 </label>
@@ -283,7 +295,7 @@ const RequirementsPage = () => {
               
               {/* Tech Stack */}
               <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center">
+                <label className="text-sm font-medium text-gray-700 mb-3 flex items-center">
                   <BriefcaseIcon className="h-4 w-4 text-green-500 mr-2" />
                   Tech Stack *
                 </label>
@@ -330,7 +342,7 @@ const RequirementsPage = () => {
               {/* Hiring Type and Budget */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                  <label htmlFor="hiringType" className="block text-sm font-medium text-gray-700 mb-3 flex items-center">
+                  <label htmlFor="hiringType" className="text-sm font-medium text-gray-700 mb-3 flex items-center">
                     <BriefcaseIcon className="h-4 w-4 text-gray-500 mr-2" />
                     Hiring Type
                   </label>
@@ -350,7 +362,7 @@ const RequirementsPage = () => {
                 </div>
                 
                 <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                  <label htmlFor="budget" className="block text-sm font-medium text-gray-700 mb-3 flex items-center">
+                  <label htmlFor="budget" className="text-sm font-medium text-gray-700 mb-3 flex items-center">
                     <CurrencyDollarIcon className="h-4 w-4 text-gray-500 mr-2" />
                     Budget/Salary Range
                   </label>
@@ -368,7 +380,7 @@ const RequirementsPage = () => {
               
               {/* Additional Notes */}
               <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-3 flex items-center">
+                <label htmlFor="notes" className="text-sm font-medium text-gray-700 mb-3 flex items-center">
                   <InformationCircleIcon className="h-4 w-4 text-gray-500 mr-2" />
                   Additional Notes
                 </label>

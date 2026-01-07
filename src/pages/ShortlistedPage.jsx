@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useCompanyContext } from '../hooks/useCompanyContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   MagnifyingGlassIcon, 
   FunnelIcon, 
@@ -20,7 +20,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 const ShortlistedPage = () => {
-  const { companies, toggleShortlist } = useCompanyContext();
+  const { companies, toggleShortlist, loading } = useCompanyContext();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
@@ -66,6 +66,18 @@ const ShortlistedPage = () => {
     toggleShortlist(companyId, false);
   };
 
+  // Show loading state while data is being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading shortlisted companies...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -239,25 +251,23 @@ const ShortlistedPage = () => {
                           <span className="text-white font-bold text-xs">{company.name.charAt(0)}</span>
                         </div>
                         <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900 truncate max-w-[100px]">{company.name}</div>
+                          <Link to={`/companies/${company.id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-900 truncate max-w-[100px] block">
+                            {company.name}
+                          </Link>
                           <div className="text-xs text-gray-500 truncate max-w-[100px]">{company.description}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900 truncate max-w-[80px]">{company.industry}</div>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {company.tags.slice(0, 2).map((tag, index) => (
-                          <span key={index} className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[0.7rem] font-medium bg-purple-100 text-purple-800">
-                            {tag}
-                          </span>
-                        ))}
-                        {company.tags.length > 2 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[0.7rem] font-medium bg-gray-100 text-gray-800">
-                            +{company.tags.length - 2}
-                          </span>
-                        )}
-                      </div>
+                      {company.document && (
+                        <div className="mt-1 flex items-center text-xs text-gray-600">
+                          <svg className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          {company.document.name}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <a 
@@ -283,6 +293,13 @@ const ShortlistedPage = () => {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-1">
+                        <Link
+                          to={`/companies/${company.id}`}
+                          className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                          title="View Details"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </Link>
                         <button
                           onClick={() => navigate(`/compose-email?companyId=${company.id}`)}
                           className="p-1.5 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors duration-200"
@@ -291,7 +308,7 @@ const ShortlistedPage = () => {
                           <PencilSquareIcon className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => navigate(`/responses?companyId=${company.id}`)}
+                          onClick={() => navigate('/email-tracker')}
                           className="p-1.5 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors duration-200"
                           title="View Responses"
                         >
@@ -350,18 +367,14 @@ const ShortlistedPage = () => {
                   </span>
                 </div>
                 <p className="text-xs text-gray-600 mt-1 truncate">{company.industry}</p>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {company.tags.slice(0, 3).map((tag, index) => (
-                    <span key={index} className="inline-flex items-center px-1 py-0.5 rounded-full text-[0.7rem] font-medium bg-purple-100 text-purple-800">
-                      {tag}
-                    </span>
-                  ))}
-                  {company.tags.length > 3 && (
-                    <span className="inline-flex items-center px-1 py-0.5 rounded-full text-[0.7rem] font-medium bg-gray-100 text-gray-800">
-                      +{company.tags.length - 3}
-                    </span>
-                  )}
-                </div>
+                {company.document && (
+                  <div className="mt-2 flex items-center text-xs text-gray-600">
+                    <svg className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    {company.document.name}
+                  </div>
+                )}
                 <div className="mt-3 pt-2 border-t border-gray-100 text-[0.7rem] text-gray-500 flex justify-between">
                   <div>Resp: {company.responses.length}</div>
                   <div>Req: {company.requirements ? 'Y' : 'N'}</div>

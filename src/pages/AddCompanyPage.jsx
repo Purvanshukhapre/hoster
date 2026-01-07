@@ -1,25 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCompanyContext } from '../hooks/useCompanyContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeftIcon, PlusIcon, XMarkIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 
-const AddCompanyPage = () => {
-  const { addCompany } = useCompanyContext();
+const AddCompanyPage = ({ isEdit = false }) => {
   const navigate = useNavigate();
+  const { id } = useParams(); // Get company ID from URL params
+  const { addCompanyAPI, updateCompanyAPI, getCompanyById } = useCompanyContext();
   
+  const [loading, setLoading] = useState(false);
+  
+  // Initialize form data based on whether we're adding or editing
   const [formData, setFormData] = useState({
     name: '',
     website: '',
     email: '',
     industry: '',
     description: '',
-    tags: [],
     status: 'New',
-    notes: ''
+    document: null,
+    documentName: ''
   });
   
-  const [newTag, setNewTag] = useState('');
   const [errors, setErrors] = useState({});
+  
+  // Load company data when editing
+  useEffect(() => {
+    if (isEdit && id) {
+      const fetchCompanyData = async () => {
+        try {
+          setLoading(true);
+          const company = await getCompanyById(id);
+          
+          setFormData({
+            name: company.name || '',
+            website: company.website || '',
+            email: company.email || '',
+            industry: company.industry || '',
+            description: company.description || '',
+            status: company.status || 'New',
+            document: null,
+            documentName: ''
+          });
+        } catch (error) {
+          console.error('Error fetching company data:', error);
+          setErrors({
+            fetch: 'Failed to load company data. Please try again.'
+          });
+          navigate('/companies'); // Redirect if unable to fetch data
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchCompanyData();
+    }
+  }, [isEdit, id, navigate]);
+  
+  // Update form title based on mode
+  const formTitle = isEdit ? 'Edit Company' : 'Add New Company';
+  const formSubtitle = isEdit ? 'Update company details' : 'Add company details to start outreach';
+  const submitButtonText = isEdit ? 'Update Company' : 'Add Company';
+  const submitIcon = isEdit ? null : <PlusIcon className="h-4 w-4 mr-2" />;
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -37,21 +80,72 @@ const AddCompanyPage = () => {
     }
   };
 
-  const handleAddTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+  const handleDocumentChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain'];
+      
+      if (!allowedTypes.includes(file.type)) {
+        setErrors(prev => ({
+          ...prev,
+          document: 'Please upload a PDF, Word, Excel, or text file.'
+        }));
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        setErrors(prev => ({
+          ...prev,
+          document: 'File size must be less than 5MB.'
+        }));
+        return;
+      }
+      
       setFormData(prev => ({
         ...prev,
-        tags: [...prev.tags, newTag.trim()]
+        document: file,
+        documentName: file.name
       }));
-      setNewTag('');
+      
+      // Clear document error if there was one
+      if (errors.document) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.document;
+          return newErrors;
+        });
+      }
+      
+      // Set preview for certain file types
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          // Preview functionality removed
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // No preview for non-image files
+      }
     }
   };
 
-  const handleRemoveTag = (tagToRemove) => {
+  const handleRemoveDocument = () => {
     setFormData(prev => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
+      document: null,
+      documentName: ''
     }));
+    // Removed document preview functionality
+    
+    // Clear document error if there was one
+    if (errors.document) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.document;
+        return newErrors;
+      });
+    }
   };
 
   const validateForm = () => {
@@ -77,20 +171,45 @@ const AddCompanyPage = () => {
       newErrors.industry = 'Industry is required';
     }
     
-    if (!formData.description.trim()) {
-      newErrors.description = 'Description is required';
-    }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (validateForm()) {
-      addCompany(formData);
-      navigate('/companies');
+      setLoading(true);
+      
+      try {
+        // Prepare form data for API submission
+        const companyData = {
+          companyName: formData.name,
+          websiteUrl: formData.website,
+          companyEmail: formData.email,
+          industry: formData.industry,
+          tags: [""], // Using empty tags array as default, can be expanded if needed
+          status: formData.status
+        };
+        
+        // Submit to API via context (add or update based on mode)
+        if (isEdit && id) {
+          await updateCompanyAPI(id, companyData);
+        } else {
+          await addCompanyAPI(companyData);
+        }
+        
+        // Navigate to companies page
+        navigate('/companies');
+      } catch (error) {
+        console.error(isEdit ? 'Error updating company:' : 'Error adding company:', error);
+        // Set error state to show user feedback
+        setErrors({
+          submit: error.message || (isEdit ? 'Failed to update company. Please try again.' : 'Failed to add company. Please try again.')
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -102,7 +221,7 @@ const AddCompanyPage = () => {
           className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200"
         >
           <ArrowLeftIcon className="h-4 w-4 mr-1" />
-          Back to Companies
+          {isEdit ? 'Back to Company Details' : 'Back to Companies'}
         </button>
       </div>
       
@@ -113,8 +232,8 @@ const AddCompanyPage = () => {
               <BuildingOfficeIcon className="h-6 w-6 text-white" />
             </div>
             <div className="ml-4">
-              <h2 className="text-xl font-bold text-white">Add New Company</h2>
-              <p className="mt-1 text-sm text-blue-100">Add company details to start outreach</p>
+              <h2 className="text-xl font-bold text-white">{formTitle}</h2>
+              <p className="mt-1 text-sm text-blue-100">{formSubtitle}</p>
             </div>
           </div>
         </div>
@@ -262,94 +381,76 @@ const AddCompanyPage = () => {
               </select>
             </div>
             
-            {/* Tags */}
+            {/* Document Upload */}
             <div className="sm:col-span-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Job Relevance Tags
+              <label htmlFor="document" className="block text-sm font-medium text-gray-700 mb-2">
+                Company Document
               </label>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                  placeholder="Add a tag and press Enter"
-                  className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm transition-all duration-200"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddTag}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                >
-                  <PlusIcon className="h-4 w-4" />
-                </button>
-              </div>
-              
-              {/* Tags Display */}
-              <div className="mt-3 flex flex-wrap gap-2">
-                {formData.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="ml-2 flex-shrink-0 h-4 w-4 rounded-full inline-flex items-center justify-center text-blue-600 hover:bg-blue-200 hover:text-blue-800 focus:outline-none"
-                    >
-                      <XMarkIcon className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-            
-            {/* Description */}
-            <div className="sm:col-span-6">
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                Description *
-              </label>
-              <div className="relative">
-                <textarea
-                  id="description"
-                  name="description"
-                  rows={4}
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="What does the company do?"
-                  className={`block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm transition-all duration-200 ${
-                    errors.description ? 'border-red-300 bg-red-50' : ''
-                  }`}
-                />
-                {errors.description && (
-                  <div className="mt-1 flex items-center">
-                    <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-sm text-red-600">{errors.description}</p>
+              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
+                <div className="space-y-1 text-center">
+                  <div className="flex text-sm text-gray-600 justify-center">
+                    <label htmlFor="document" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                      <span>Upload a file</span>
+                      <input
+                        id="document"
+                        name="document"
+                        type="file"
+                        className="sr-only"
+                        onChange={handleDocumentChange}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                      />
+                    </label>
+                    <p className="pl-1">or drag and drop</p>
                   </div>
-                )}
+                  <p className="text-xs text-gray-500">
+                    PDF, Word, Excel, or TXT up to 5MB
+                  </p>
+                  
+                  {formData.documentName && (
+                    <div className="mt-2 flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center truncate">
+                        <svg className="h-5 w-5 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="text-sm text-gray-700 truncate max-w-xs">{formData.documentName}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemoveDocument}
+                        className="ml-2 p-1 text-red-600 hover:text-red-800 rounded-full"
+                      >
+                        <XMarkIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
+                  
+                  {errors.document && (
+                    <div className="mt-2 flex items-center text-sm text-red-600">
+                      <svg className="h-5 w-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span>{errors.document}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <p className="mt-1 text-sm text-gray-500">What the company does</p>
-            </div>
-            
-            {/* Notes */}
-            <div className="sm:col-span-6">
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
-                Internal Notes
-              </label>
-              <textarea
-                id="notes"
-                name="notes"
-                rows={3}
-                value={formData.notes}
-                onChange={handleChange}
-                placeholder="Any internal notes about this company..."
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm transition-all duration-200"
-              />
             </div>
           </div>
+          
+          {errors.submit && (
+            <div className="rounded-md bg-red-50 p-4 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">{errors.submit}</h3>
+                </div>
+              </div>
+            </div>
+          )}
           
           <div className="mt-8 flex justify-end space-x-4">
             <button
@@ -361,10 +462,23 @@ const AddCompanyPage = () => {
             </button>
             <button
               type="submit"
-              className="inline-flex items-center px-6 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-md"
+              disabled={loading}
+              className="inline-flex items-center px-6 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-md disabled:opacity-50"
             >
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Add Company
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {isEdit ? 'Updating...' : 'Adding...'}
+                </>
+              ) : (
+                <>
+                  {submitIcon}
+                  {submitButtonText}
+                </>
+              )}
             </button>
           </div>
         </form>

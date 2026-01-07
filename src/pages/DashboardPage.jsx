@@ -12,45 +12,168 @@ import {
 } from '@heroicons/react/24/outline';
 
 const DashboardPage = () => {
-  const { companies } = useCompanyContext();
+  const { companies, loading } = useCompanyContext();
   
   const stats = useMemo(() => {
     const totalCompanies = companies.length;
-    const emailsSent = companies.filter(company => 
-      company.status !== 'New' && company.status !== 'Contacted'
+    const newCompanies = companies.filter(company => 
+      company.status === 'New'
     ).length;
-    const responsesReceived = companies.filter(company => 
-      company.status === 'Responded' || company.status === 'Shortlisted'
+    const contactedCompanies = companies.filter(company => 
+      company.status === 'Contacted'
+    ).length;
+    const respondedCompanies = companies.filter(company => 
+      company.status === 'Responded'
     ).length;
     const shortlistedCompanies = companies.filter(company => 
-      company.isShortlisted
+      company.status === 'Shortlisted' || company.isShortlisted
     ).length;
+    
+    // Calculate response rate
+    const contactedCount = companies.filter(company => 
+      company.status !== 'New'
+    ).length;
+    const respondedCount = companies.filter(company => 
+      company.status === 'Responded' || company.status === 'Shortlisted'
+    ).length;
+    const responseRate = contactedCount > 0 ? Math.round((respondedCount / contactedCount) * 100) : 0;
 
     return {
       totalCompanies,
-      emailsSent,
-      responsesReceived,
-      shortlistedCompanies
+      newCompanies,
+      contactedCompanies,
+      respondedCompanies,
+      shortlistedCompanies,
+      responseRate
     };
   }, [companies]);
 
-  // Mock chart data for outreach progress
-  const chartData = [
-    { name: 'Jan 1', companies: 2 },
-    { name: 'Jan 8', companies: 5 },
-    { name: 'Jan 15', companies: 7 },
-    { name: 'Jan 22', companies: 9 },
-    { name: 'Jan 29', companies: 12 }
-  ];
+  // Calculate industry distribution
+  const industryDistribution = useMemo(() => {
+    const distribution = {};
+    companies.forEach(company => {
+      distribution[company.industry] = (distribution[company.industry] || 0) + 1;
+    });
+    return Object.entries(distribution).slice(0, 5).map(([industry, count]) => ({
+      name: industry,
+      value: count
+    }));
+  }, [companies]);
+
+  // Calculate status distribution
+  const statusDistribution = useMemo(() => {
+    const distribution = {};
+    companies.forEach(company => {
+      distribution[company.status] = (distribution[company.status] || 0) + 1;
+    });
+    return Object.entries(distribution).map(([status, count]) => ({
+      name: status,
+      value: count
+    }));
+  }, [companies]);
+
+  // Calculate weekly activity
+  const weeklyActivity = useMemo(() => {
+    const weeks = {};
+    const today = new Date();
+    
+    // Initialize weeks for the last 4 weeks
+    for (let i = 3; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(today.getDate() - (i * 7));
+      const weekKey = `Week ${i + 1}`;
+      weeks[weekKey] = 0;
+    }
+    
+    companies.forEach(company => {
+      const companyDate = new Date(company.dateAdded);
+      const daysDiff = Math.floor((today - companyDate) / (1000 * 60 * 60 * 24));
+      const weekDiff = Math.floor(daysDiff / 7);
+      
+      if (weekDiff < 4) {
+        const weekKey = `Week ${4 - weekDiff}`;
+        weeks[weekKey] = (weeks[weekKey] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(weeks).map(([week, count]) => ({
+      name: week,
+      value: count
+    }));
+  }, [companies]);
+
+  // Calculate response trends
+  const responseTrends = useMemo(() => {
+    const trend = [];
+    const today = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const companiesAdded = companies.filter(company => 
+        company.dateAdded === dateStr
+      ).length;
+      
+      const responded = companies.filter(company => 
+        company.status === 'Responded' && company.dateAdded === dateStr
+      ).length;
+      
+      trend.push({
+        date: dateStr,
+        added: companiesAdded,
+        responded: responded
+      });
+    }
+    
+    return trend;
+  }, [companies]);
 
   // Recent activity data
-  const recentActivity = [
-    { id: 1, action: 'Added new company', company: 'Tech Innovations Inc.', time: '2 hours ago', type: 'add' },
-    { id: 2, action: 'Sent email to', company: 'Data Systems Ltd.', time: '4 hours ago', type: 'email' },
-    { id: 3, action: 'Received response from', company: 'Cloud Solutions Group', time: '1 day ago', type: 'response' },
-    { id: 4, action: 'Shortlisted', company: 'Mobile First Studios', time: '2 days ago', type: 'shortlist' },
-  ];
+  const recentActivity = useMemo(() => {
+    const activities = [];
+    companies.forEach(company => {
+      if (company.status !== 'New') {
+        activities.push({
+          id: company.id,
+          action: `Status updated to ${company.status}`,
+          company: company.name,
+          time: company.dateAdded,
+          type: 'status'
+        });
+      }
+      if (company.responses && company.responses.length > 0) {
+        company.responses.forEach(response => {
+          activities.push({
+            id: `${company.id}-${response.id}`,
+            action: 'Received response',
+            company: company.name,
+            time: response.date,
+            type: 'response'
+          });
+        });
+      }
+    });
+    
+    // Sort by date and take last 5
+    return activities
+      .sort((a, b) => new Date(b.time) - new Date(a.time))
+      .slice(0, 5);
+  }, [companies]);
 
+  // Show loading state while data is being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -85,8 +208,8 @@ const DashboardPage = () => {
         <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow duration-300">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-100 text-sm font-medium">Emails Sent</p>
-              <p className="text-3xl font-bold mt-1">{stats.emailsSent}</p>
+              <p className="text-green-100 text-sm font-medium">Contacted</p>
+              <p className="text-3xl font-bold mt-1">{stats.contactedCompanies}</p>
               <div className="flex items-center mt-2">
                 <ArrowUpIcon className="w-4 h-4 text-green-200" />
                 <span className="text-green-200 text-xs ml-1">+8% from last week</span>
@@ -101,11 +224,11 @@ const DashboardPage = () => {
         <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow duration-300">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-yellow-100 text-sm font-medium">Responses</p>
-              <p className="text-3xl font-bold mt-1">{stats.responsesReceived}</p>
+              <p className="text-yellow-100 text-sm font-medium">Response Rate</p>
+              <p className="text-3xl font-bold mt-1">{stats.responseRate}%</p>
               <div className="flex items-center mt-2">
                 <ArrowUpIcon className="w-4 h-4 text-yellow-200" />
-                <span className="text-yellow-200 text-xs ml-1">+15% from last week</span>
+                <span className="text-yellow-200 text-xs ml-1">+5% from last week</span>
               </div>
             </div>
             <div className="p-3 bg-yellow-400 rounded-lg">
@@ -133,54 +256,153 @@ const DashboardPage = () => {
 
       {/* Charts and Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Outreach Progress Chart */}
+        {/* Industry Distribution Chart */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Outreach Progress</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Industry Distribution</h2>
             <div className="flex items-center text-sm text-gray-500">
-              <ArrowTrendingUpIcon className="w-4 h-4 mr-1" />
-              <span>+12.5% this month</span>
+              <ChartBarIcon className="w-4 h-4 mr-1" />
+              <span>Top 5 industries</span>
             </div>
           </div>
-          <div className="h-64 flex items-end space-x-2">
-            {chartData.map((item, index) => (
-              <div key={index} className="flex flex-col items-center flex-1">
-                <div 
-                  className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg hover:from-blue-600 hover:to-blue-500 transition-all duration-300"
-                  style={{ height: `${(item.companies / 12) * 100}%` }}
-                ></div>
-                <span className="text-xs text-gray-500 mt-2 font-medium">{item.name}</span>
+          <div className="space-y-4">
+            {industryDistribution.map((item, index) => (
+              <div key={index} className="flex items-center">
+                <div className="w-24 text-sm text-gray-600 truncate">{item.name}</div>
+                <div className="flex-1 ml-2">
+                  <div className="h-6 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
+                      style={{ width: `${(item.value / Math.max(...industryDistribution.map(i => i.value), 1)) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+                <div className="w-10 text-right text-sm text-gray-900 font-medium">{item.value}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Status Distribution Chart */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Recent Activity</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Status Distribution</h2>
+            <div className="flex items-center text-sm text-gray-500">
+              <ChartBarIcon className="w-4 h-4 mr-1" />
+              <span>Companies by status</span>
+            </div>
+          </div>
           <div className="space-y-4">
-            {recentActivity.map((activity) => (
-              <div key={activity.id} className="flex items-start p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  activity.type === 'add' ? 'bg-blue-100 text-blue-600' :
-                  activity.type === 'email' ? 'bg-green-100 text-green-600' :
-                  activity.type === 'response' ? 'bg-yellow-100 text-yellow-600' :
-                  'bg-purple-100 text-purple-600'
-                }`}>
-                  {activity.type === 'add' && <BuildingOfficeIcon className="w-4 h-4" />}
-                  {activity.type === 'email' && <EnvelopeIcon className="w-4 h-4" />}
-                  {activity.type === 'response' && <CheckCircleIcon className="w-4 h-4" />}
-                  {activity.type === 'shortlist' && <UserGroupIcon className="w-4 h-4" />}
+            {statusDistribution.map((item, index) => (
+              <div key={index} className="flex items-center">
+                <div className="w-24 text-sm text-gray-600 truncate">{item.name}</div>
+                <div className="flex-1 ml-2">
+                  <div className="h-6 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-500 to-emerald-600 rounded-full"
+                      style={{ width: `${(item.value / Math.max(...statusDistribution.map(i => i.value), 1)) * 100}%` }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="ml-3 flex-1">
-                  <p className="text-sm text-gray-900">
-                    <span className="font-medium">{activity.action}</span> <span className="font-medium text-blue-600">{activity.company}</span>
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                <div className="w-10 text-right text-sm text-gray-900 font-medium">{item.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Weekly Activity and Response Trends */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Weekly Activity */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Weekly Activity</h2>
+            <div className="flex items-center text-sm text-gray-500">
+              <ChartBarIcon className="w-4 h-4 mr-1" />
+              <span>Last 4 weeks</span>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {weeklyActivity.map((item, index) => (
+              <div key={index} className="flex items-center">
+                <div className="w-24 text-sm text-gray-600 truncate">{item.name}</div>
+                <div className="flex-1 ml-2">
+                  <div className="h-6 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full"
+                      style={{ width: `${(item.value / Math.max(...weeklyActivity.map(i => i.value), 1)) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+                <div className="w-10 text-right text-sm text-gray-900 font-medium">{item.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Response Trends */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Response Trends</h2>
+            <div className="flex items-center text-sm text-gray-500">
+              <ChartBarIcon className="w-4 h-4 mr-1" />
+              <span>Last 7 days</span>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {responseTrends.map((item, index) => (
+              <div key={index} className="flex items-center">
+                <div className="w-16 text-xs text-gray-600 truncate">{item.date.split('-')[2]}/{item.date.split('-')[1]}</div>
+                <div className="w-20 text-xs text-gray-700">
+                  <span className="text-blue-600">Added: {item.added}</span>
+                </div>
+                <div className="flex-1 ml-2">
+                  <div className="h-6 bg-gray-200 rounded-full overflow-hidden flex items-center">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-400 rounded-full flex items-center justify-center text-xs text-white"
+                      style={{ width: `${item.added > 0 ? 50 : 0}%` }}
+                    >
+                      {item.added}
+                    </div>
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-500 rounded-full flex items-center justify-center text-xs text-white"
+                      style={{ width: `${item.responded > 0 ? 50 : 0}%` }}
+                    >
+                      {item.responded}
+                    </div>
+                  </div>
+                </div>
+                <div className="w-16 text-right text-xs text-gray-700">
+                  <span className="text-green-600">Resp: {item.responded}</span>
                 </div>
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-6">Recent Activity</h2>
+        <div className="space-y-4">
+          {recentActivity.map((activity) => (
+            <div key={activity.id} className="flex items-start p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                activity.type === 'status' ? 'bg-blue-100 text-blue-600' :
+                activity.type === 'response' ? 'bg-green-100 text-green-600' :
+                'bg-purple-100 text-purple-600'
+              }`}>
+                {activity.type === 'status' && <ChartBarIcon className="w-4 h-4" />}
+                {activity.type === 'response' && <CheckCircleIcon className="w-4 h-4" />}
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm text-gray-900">
+                  <span className="font-medium">{activity.action}</span> <span className="font-medium text-blue-600">{activity.company}</span>
+                </p>
+                <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

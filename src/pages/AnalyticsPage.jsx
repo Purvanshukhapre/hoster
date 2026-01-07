@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 const AnalyticsPage = () => {
-  const { companies } = useCompanyContext();
+  const { companies, loading } = useCompanyContext();
 
   // Calculate analytics data
   const analyticsData = useMemo(() => {
@@ -69,6 +69,18 @@ const AnalyticsPage = () => {
   // Get status breakdown
   const statusBreakdown = Object.entries(analyticsData.statusDistribution);
 
+  // Show loading state while data is being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-6">
       <div>

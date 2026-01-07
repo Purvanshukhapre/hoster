@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeftIcon, PaperAirplaneIcon, DocumentTextIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 const ComposeEmailPage = () => {
-  const { companies, addResponse } = useCompanyContext();
+  const { companies, addResponse, loading } = useCompanyContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const companyId = searchParams.get('companyId');
@@ -75,6 +75,7 @@ Best regards,
   const [errors, setErrors] = useState({});
   const [isSending, setIsSending] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [attachments, setAttachments] = useState([]);
 
   const handleTemplateSelect = (template) => {
     setSelectedTemplate(template.id);
@@ -86,7 +87,7 @@ Best regards,
         .replace('[Your Services]', 'software development and partnership opportunities')
         .replace('[Your Name]', 'Elite Outreach Team')
         .replace('[Industry]', selectedCompanyFromParams?.industry || 'your industry')
-        .replace('[Tech Stack]', selectedCompanyFromParams?.tags.join(', ') || 'relevant technologies')
+        .replace('[Tech Stack]', selectedCompanyFromParams?.document?.name || 'relevant technologies')
     }));
   };
 
@@ -141,7 +142,12 @@ Best regards,
           id: Date.now(),
           date: new Date().toISOString().split('T')[0],
           subject: formData.subject,
-          content: formData.body
+          content: formData.body,
+          attachments: attachments.map(attachment => ({
+            name: attachment.name,
+            size: attachment.size,
+            type: attachment.type
+          }))
         };
         
         addResponse(parseInt(companyId), response);
@@ -157,6 +163,7 @@ Best regards,
           subject: '',
           body: ''
         });
+        setAttachments([]);
         setSuccessMessage('');
       }, 3000);
     }, 1500);
@@ -170,8 +177,48 @@ Best regards,
     });
     setSelectedTemplate('');
     setErrors({});
+    setAttachments([]);
+  };
+  
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    
+    // Add new files to the existing attachments
+    const newAttachments = files.map(file => ({
+      id: Date.now() + Math.random(), // Unique ID for each file
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type
+    }));
+    
+    setAttachments(prev => [...prev, ...newAttachments]);
+  };
+  
+  const removeAttachment = (id) => {
+    setAttachments(prev => prev.filter(attachment => attachment.id !== id));
+  };
+  
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Show loading state while data is being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading email data...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
@@ -320,6 +367,63 @@ Best regards,
                 </div>
               )}
             </div>
+          </div>
+          
+          {/* Attachments Section */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Attachments
+            </label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors duration-200">
+              <input
+                type="file"
+                id="attachments"
+                className="hidden"
+                multiple
+                onChange={handleFileChange}
+              />
+              <button
+                type="button"
+                onClick={() => document.getElementById('attachments').click()}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              >
+                <svg className="h-5 w-5 text-gray-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+                Add Attachments
+              </button>
+              <p className="mt-2 text-sm text-gray-500">or drag and drop files here</p>
+              <p className="text-xs text-gray-400 mt-1">Supports PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, PNG, and other common formats</p>
+            </div>
+            
+            {/* Display selected attachments */}
+            {attachments.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Attachments ({attachments.length}):</h4>
+                <div className="space-y-2">
+                  {attachments.map((attachment) => (
+                    <div key={attachment.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <div className="flex items-center">
+                        <svg className="h-5 w-5 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 truncate max-w-xs">{attachment.name}</p>
+                          <p className="text-xs text-gray-500">{formatFileSize(attachment.size)}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(attachment.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Success Message */}

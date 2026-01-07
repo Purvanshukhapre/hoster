@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { useCompanyContext } from '../hooks/useCompanyContext';
 import { 
   HomeIcon, 
   BuildingOfficeIcon, 
@@ -10,23 +12,49 @@ import {
   TableCellsIcon,
   UserGroupIcon,
   Cog6ToothIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  ArrowLeftOnRectangleIcon,
+  UserCircleIcon
 } from '@heroicons/react/24/outline';
 
 const MainLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const { selectedCompany, setSelectedCompany } = useCompanyContext();
   const location = useLocation();
+  const navigate = useNavigate();
+  
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+  
+  const handleCompanySelect = (company) => {
+    setSelectedCompany(company);
+    navigate(`/companies/${company.id}`);
+  };
 
+  // Navigation items based on user role
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: ChartBarIcon },
-    { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
+    ...(user?.role === 'admin' 
+      ? [
+          { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
+          { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
+          { name: 'Manage Users', href: '/manage-users', icon: UserGroupIcon },
+        ] 
+      : []),
     { name: 'Companies', href: '/companies', icon: BuildingOfficeIcon },
     { name: 'Add Company', href: '/add-company', icon: PlusCircleIcon },
     { name: 'Compose Email', href: '/compose-email', icon: EnvelopeIcon },
-    { name: 'Responses', href: '/responses', icon: ClipboardDocumentListIcon },
-    { name: 'Requirements', href: '/requirements', icon: DocumentTextIcon },
+    { name: 'Email Tracker', href: '/email-tracker', icon: ClipboardDocumentListIcon },
     { name: 'Shortlisted', href: '/shortlisted', icon: UserGroupIcon },
+    { name: 'Profile', href: '/profile', icon: UserCircleIcon },
+
+    // Logout button appears for both admin and user
+    { name: 'Logout', href: '#', onClick: handleLogout, icon: ArrowLeftOnRectangleIcon },
   ];
+
+  const userNavigation = navigation;
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
@@ -43,21 +71,31 @@ const MainLayout = ({ children }) => {
         
         <nav className="flex-1 px-4 py-6 overflow-y-auto">
           <ul className="space-y-1">
-            {navigation.map((item) => {
+            {userNavigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <li key={item.name}>
-                  <Link
-                    to={item.href}
-                    className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 group ${
-                      isActive
-                        ? 'bg-blue-700 text-white shadow-md'
-                        : 'text-blue-100 hover:bg-blue-700 hover:text-white hover:shadow-md'
-                    }`}
-                  >
-                    <item.icon className={`w-5 h-5 mr-3 transition-colors duration-200 ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} />
-                    <span className="truncate">{item.name}</span>
-                  </Link>
+                  {item.onClick ? (
+                    <button
+                      onClick={item.onClick}
+                      className="flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 group text-blue-100 hover:bg-blue-700 hover:text-white hover:shadow-md"
+                    >
+                      <item.icon className="w-5 h-5 mr-3 transition-colors duration-200 text-blue-300 group-hover:text-white" />
+                      <span className="truncate">{item.name}</span>
+                    </button>
+                  ) : (
+                    <Link
+                      to={item.href}
+                      className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 group ${
+                        isActive
+                          ? 'bg-blue-700 text-white shadow-md'
+                          : 'text-blue-100 hover:bg-blue-700 hover:text-white hover:shadow-md'
+                      }`}
+                    >
+                      <item.icon className={`w-5 h-5 mr-3 transition-colors duration-200 ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} />
+                      <span className="truncate">{item.name}</span>
+                    </Link>
+                  )}
                 </li>
               );
             })}
@@ -87,21 +125,31 @@ const MainLayout = ({ children }) => {
         
         <nav className="flex-1 px-4 py-6 overflow-y-auto">
           <ul className="space-y-1">
-            {navigation.map((item) => {
+            {userNavigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <li key={item.name}>
-                  <Link
-                    to={item.href}
-                    className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 group ${
-                      isActive
-                        ? 'bg-blue-700 text-white shadow-md'
-                        : 'text-blue-100 hover:bg-blue-700 hover:text-white hover:shadow-md'
-                    }`}
-                  >
-                    <item.icon className={`w-5 h-5 mr-3 transition-colors duration-200 ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} />
-                    <span className="truncate">{item.name}</span>
-                  </Link>
+                  {item.onClick ? (
+                    <button
+                      onClick={item.onClick}
+                      className="flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 group text-blue-100 hover:bg-blue-700 hover:text-white hover:shadow-md"
+                    >
+                      <item.icon className="w-5 h-5 mr-3 transition-colors duration-200 text-blue-300 group-hover:text-white" />
+                      <span className="truncate">{item.name}</span>
+                    </button>
+                  ) : (
+                    <Link
+                      to={item.href}
+                      className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 group ${
+                        isActive
+                          ? 'bg-blue-700 text-white shadow-md'
+                          : 'text-blue-100 hover:bg-blue-700 hover:text-white hover:shadow-md'
+                      }`}
+                    >
+                      <item.icon className={`w-5 h-5 mr-3 transition-colors duration-200 ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} />
+                      <span className="truncate">{item.name}</span>
+                    </Link>
+                  )}
                 </li>
               );
             })}
@@ -135,9 +183,45 @@ const MainLayout = ({ children }) => {
           </div>
           
           <div className="flex items-center space-x-4">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">U</span>
+            <div className="relative">
+              <select
+                value={selectedCompany?.id || ''}
+                onChange={(e) => {
+                  const company = JSON.parse(e.target.value);
+                  handleCompanySelect(company);
+                }}
+                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+              >
+                <option value="">Select Company</option>
+                {useCompanyContext().companies.map((company) => (
+                  <option key={company.id} value={JSON.stringify(company)}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
             </div>
+            {user ? (
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">{user.name.charAt(0)}</span>
+                </div>
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.role}</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                  title="Logout"
+                >
+                  <ArrowLeftOnRectangleIcon className="h-5 w-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs font-bold">U</span>
+                </div>
+            )}
           </div>
         </div>
 
