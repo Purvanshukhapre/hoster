@@ -1,68 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCompanyContext } from '../hooks/useCompanyContext';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeftIcon, PlusIcon, XMarkIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { 
+  BuildingOfficeIcon, 
+  PhoneIcon, 
+  EnvelopeIcon, 
+  GlobeAltIcon, 
+  MapPinIcon, 
+  UserIcon,
+  BriefcaseIcon,
+  DocumentTextIcon,
+  ArrowLeftIcon,
+  PlusIcon,
+  XCircleIcon,
+  PaperClipIcon
+} from '@heroicons/react/24/outline';
 
-const AddCompanyPage = ({ isEdit = false }) => {
+const AddCompanyPage = () => {
   const navigate = useNavigate();
-  const { id } = useParams(); // Get company ID from URL params
-  const { addCompanyAPI, updateCompanyAPI, getCompanyById } = useCompanyContext();
-  
-  const [loading, setLoading] = useState(false);
-  
-  // Initialize form data based on whether we're adding or editing
+  const { addCompanyAPI } = useCompanyContext();
   const [formData, setFormData] = useState({
     name: '',
-    website: '',
     email: '',
-    industry: '',
-    description: '',
-    status: 'New',
-    document: null,
-    documentName: ''
+    website: '',
+    status: 'New'
   });
-  
+  const [attachments, setAttachments] = useState([]);
   const [errors, setErrors] = useState({});
-  
-  // Load company data when editing
-  useEffect(() => {
-    if (isEdit && id) {
-      const fetchCompanyData = async () => {
-        try {
-          setLoading(true);
-          const company = await getCompanyById(id);
-          
-          setFormData({
-            name: company.name || '',
-            website: company.website || '',
-            email: company.email || '',
-            industry: company.industry || '',
-            description: company.description || '',
-            status: company.status || 'New',
-            document: null,
-            documentName: ''
-          });
-        } catch (error) {
-          console.error('Error fetching company data:', error);
-          setErrors({
-            fetch: 'Failed to load company data. Please try again.'
-          });
-          navigate('/companies'); // Redirect if unable to fetch data
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      fetchCompanyData();
-    }
-  }, [isEdit, id, navigate]);
-  
-  // Update form title based on mode
-  const formTitle = isEdit ? 'Edit Company' : 'Add New Company';
-  const formSubtitle = isEdit ? 'Update company details' : 'Add company details to start outreach';
-  const submitButtonText = isEdit ? 'Update Company' : 'Add Company';
-  const submitIcon = isEdit ? null : <PlusIcon className="h-4 w-4 mr-2" />;
-
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -70,7 +36,6 @@ const AddCompanyPage = ({ isEdit = false }) => {
       ...prev,
       [name]: value
     }));
-    
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
@@ -80,97 +45,67 @@ const AddCompanyPage = ({ isEdit = false }) => {
     }
   };
 
-  const handleDocumentChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file type
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain'];
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    
+    // Validate that only PDF files are accepted
+    const validFiles = files.filter(file => {
+      const fileType = file.type.toLowerCase();
+      const fileName = file.name.toLowerCase();
       
-      if (!allowedTypes.includes(file.type)) {
-        setErrors(prev => ({
-          ...prev,
-          document: 'Please upload a PDF, Word, Excel, or text file.'
-        }));
-        return;
+      if (!fileType.includes('pdf') && !fileName.endsWith('.pdf')) {
+        alert('Only PDF files are allowed for document uploads.');
+        return false;
       }
-      
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setErrors(prev => ({
-          ...prev,
-          document: 'File size must be less than 5MB.'
-        }));
-        return;
-      }
-      
-      setFormData(prev => ({
-        ...prev,
-        document: file,
-        documentName: file.name
-      }));
-      
-      // Clear document error if there was one
-      if (errors.document) {
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.document;
-          return newErrors;
-        });
-      }
-      
-      // Set preview for certain file types
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          // Preview functionality removed
-        };
-        reader.readAsDataURL(file);
-      } else {
-        // No preview for non-image files
-      }
-    }
+      return true;
+    });
+    
+    if (validFiles.length === 0) return; // Exit if no valid files
+    
+    const newAttachments = validFiles.map(file => ({
+      id: Date.now() + Math.random(),
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type
+    }));
+    setAttachments(prev => [...prev, ...newAttachments]);
   };
 
-  const handleRemoveDocument = () => {
-    setFormData(prev => ({
-      ...prev,
-      document: null,
-      documentName: ''
-    }));
-    // Removed document preview functionality
-    
-    // Clear document error if there was one
-    if (errors.document) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.document;
-        return newErrors;
-      });
-    }
+  const removeAttachment = (id) => {
+    setAttachments(prev => prev.filter(attachment => attachment.id !== id));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.name.trim()) {
-      newErrors.name = 'Company name is required';
-    }
-    
+    if (!formData.name.trim()) newErrors.name = 'Company name is required';
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
     }
-    
-    if (!formData.website.trim()) {
-      newErrors.website = 'Website is required';
-    } else if (!/^https?:\/\//.test(formData.website)) {
-      newErrors.website = 'Website must start with http:// or https://';
+    // Validate attachments if present
+    if (attachments.length > 0) {
+      const invalidFiles = attachments.some(attachment => {
+        const fileType = attachment.file.type.toLowerCase();
+        const fileName = attachment.file.name.toLowerCase();
+        return !fileType.includes('pdf') && !fileName.endsWith('.pdf');
+      });
+      
+      if (invalidFiles) {
+        newErrors.attachments = 'Only PDF files are allowed';
+      }
     }
-    
-    if (!formData.industry.trim()) {
-      newErrors.industry = 'Industry is required';
-    }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -178,192 +113,148 @@ const AddCompanyPage = ({ isEdit = false }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (validateForm()) {
-      setLoading(true);
+    if (!validateForm()) return;
+    
+    // Validate file types before submitting
+    if (attachments.length > 0) {
+      const invalidFiles = attachments.filter(attachment => {
+        const fileType = attachment.file.type.toLowerCase();
+        const fileName = attachment.file.name.toLowerCase();
+        return !fileType.includes('pdf') && !fileName.endsWith('.pdf');
+      });
       
-      try {
-        // Prepare form data for API submission
-        const companyData = {
-          companyName: formData.name,
-          websiteUrl: formData.website,
-          companyEmail: formData.email,
-          industry: formData.industry,
-          tags: [""], // Using empty tags array as default, can be expanded if needed
-          status: formData.status
-        };
-        
-        // Submit to API via context (add or update based on mode)
-        if (isEdit && id) {
-          await updateCompanyAPI(id, companyData);
-        } else {
-          await addCompanyAPI(companyData);
-        }
-        
-        // Navigate to companies page
-        navigate('/companies');
-      } catch (error) {
-        console.error(isEdit ? 'Error updating company:' : 'Error adding company:', error);
-        // Set error state to show user feedback
-        setErrors({
-          submit: error.message || (isEdit ? 'Failed to update company. Please try again.' : 'Failed to add company. Please try again.')
-        });
-      } finally {
-        setLoading(false);
+      if (invalidFiles.length > 0) {
+        setErrors({ submit: 'Only PDF files are allowed for document uploads.' });
+        return;
       }
+    }
+    
+    setLoading(true);
+    try {
+      // Prepare company data
+      // Format according to backend expectations
+      const companyData = {
+        name: formData.name || '',
+        contactPerson: 'N/A', // Backend requires this field
+        email: formData.email || '',
+        website: formData.website || '',
+        status: formData.status || 'New',
+        industry: 'Technology', // Required field by backend
+        tags: '', // Optional field
+      };
+      
+      // Only add uploadDocument if there are actual files to upload
+      if (attachments.length > 0) {
+        companyData.uploadDocument = attachments.map(attachment => attachment.file);
+      }
+      
+      await addCompanyAPI(companyData);
+      
+      // If there are attachments, we might need to handle them separately
+      // For now, just navigate to companies list
+      navigate('/companies');
+    } catch (error) {
+      console.error('Error adding company:', error);
+      // Extract error message from response if available
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to add company. Please try again.';
+      setErrors({ submit: errorMessage });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Add New Company</h1>
+          <p className="text-gray-600 mt-1">Fill in the details for the new company</p>
+        </div>
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200"
+          className="flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
         >
-          <ArrowLeftIcon className="h-4 w-4 mr-1" />
-          {isEdit ? 'Back to Company Details' : 'Back to Companies'}
+          <ArrowLeftIcon className="h-5 w-5 mr-2" />
+          Back
         </button>
       </div>
-      
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
-          <div className="flex items-center">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <BuildingOfficeIcon className="h-6 w-6 text-white" />
-            </div>
-            <div className="ml-4">
-              <h2 className="text-xl font-bold text-white">{formTitle}</h2>
-              <p className="mt-1 text-sm text-blue-100">{formSubtitle}</p>
-            </div>
-          </div>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Company Name */}
-            <div className="sm:col-span-6">
+            <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                 Company Name *
               </label>
               <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <BuildingOfficeIcon className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   type="text"
-                  name="name"
                   id="name"
+                  name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className={`block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm transition-all duration-200 ${
-                    errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.name ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Enter company name"
                 />
-                {errors.name && (
-                  <div className="mt-1 flex items-center">
-                    <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-sm text-red-600">{errors.name}</p>
-                  </div>
-                )}
               </div>
+              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
             </div>
-            
-            {/* Website */}
-            <div className="sm:col-span-6">
-              <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-2">
-                Website URL *
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  name="website"
-                  id="website"
-                  value={formData.website}
-                  onChange={handleChange}
-                  placeholder="https://example.com"
-                  className={`block w-full pl-10 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm transition-all duration-200 ${
-                    errors.website ? 'border-red-300 bg-red-50' : ''
-                  }`}
-                />
-                {errors.website && (
-                  <div className="mt-1 flex items-center">
-                    <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-sm text-red-600">{errors.website}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            
+
+
+
             {/* Email */}
-            <div className="sm:col-span-6">
+            <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Company Email *
+                Email *
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                  <EnvelopeIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   type="email"
-                  name="email"
                   id="email"
+                  name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="company@example.com"
-                  className={`block w-full pl-10 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm transition-all duration-200 ${
-                    errors.email ? 'border-red-300 bg-red-50' : ''
+                  className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.email ? 'border-red-300' : 'border-gray-300'
                   }`}
+                  placeholder="Enter email address"
                 />
-                {errors.email && (
-                  <div className="mt-1 flex items-center">
-                    <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-sm text-red-600">{errors.email}</p>
-                  </div>
-                )}
               </div>
+              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
             </div>
-            
-            {/* Industry */}
-            <div className="sm:col-span-3">
-              <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-2">
-                Industry / Website Type *
+
+            {/* Website */}
+            <div>
+              <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-2">
+                Website
               </label>
               <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <GlobeAltIcon className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
-                  type="text"
-                  name="industry"
-                  id="industry"
-                  value={formData.industry}
+                  type="url"
+                  id="website"
+                  name="website"
+                  value={formData.website}
                   onChange={handleChange}
-                  placeholder="e.g., Software Development"
-                  className={`block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm transition-all duration-200 ${
-                    errors.industry ? 'border-red-300 bg-red-50' : ''
-                  }`}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="https://example.com"
                 />
-                {errors.industry && (
-                  <div className="mt-1 flex items-center">
-                    <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-sm text-red-600">{errors.industry}</p>
-                  </div>
-                )}
               </div>
             </div>
-            
+
             {/* Status */}
-            <div className="sm:col-span-3">
+            <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
                 Status
               </label>
@@ -372,78 +263,78 @@ const AddCompanyPage = ({ isEdit = false }) => {
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm transition-all duration-200"
+                className="block w-full pl-3 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="New">New</option>
                 <option value="Contacted">Contacted</option>
                 <option value="Responded">Responded</option>
                 <option value="Shortlisted">Shortlisted</option>
+                <option value="Rejected">Rejected</option>
               </select>
             </div>
-            
-            {/* Document Upload */}
-            <div className="sm:col-span-6">
-              <label htmlFor="document" className="block text-sm font-medium text-gray-700 mb-2">
-                Company Document
-              </label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
-                <div className="space-y-1 text-center">
-                  <div className="flex text-sm text-gray-600 justify-center">
-                    <label htmlFor="document" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                      <span>Upload a file</span>
-                      <input
-                        id="document"
-                        name="document"
-                        type="file"
-                        className="sr-only"
-                        onChange={handleDocumentChange}
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
-                      />
-                    </label>
-                    <p className="pl-1">or drag and drop</p>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    PDF, Word, Excel, or TXT up to 5MB
-                  </p>
-                  
-                  {formData.documentName && (
-                    <div className="mt-2 flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center truncate">
-                        <svg className="h-5 w-5 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span className="text-sm text-gray-700 truncate max-w-xs">{formData.documentName}</span>
+          </div>
+
+
+
+          {/* File Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Attachments
+            </label>
+            <div className="border border-gray-300 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <PaperClipIcon className="h-5 w-5 text-gray-400 mr-2" />
+                  <span className="text-sm font-medium text-gray-700">Add company documents</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                  Browse Files
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  multiple
+                />
+              </div>
+
+              {/* Attachment List */}
+              {attachments.length > 0 && (
+                <div className="space-y-2">
+                  {attachments.map(attachment => (
+                    <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center">
+                        <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-3" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{attachment.name}</p>
+                          <p className="text-xs text-gray-500">{formatFileSize(attachment.size)}</p>
+                        </div>
                       </div>
                       <button
                         type="button"
-                        onClick={handleRemoveDocument}
-                        className="ml-2 p-1 text-red-600 hover:text-red-800 rounded-full"
+                        onClick={() => removeAttachment(attachment.id)}
+                        className="p-1 text-gray-400 hover:text-red-500 transition-colors duration-200"
                       >
-                        <XMarkIcon className="h-5 w-5" />
+                        <XCircleIcon className="h-4 w-4" />
                       </button>
                     </div>
-                  )}
-                  
-                  {errors.document && (
-                    <div className="mt-2 flex items-center text-sm text-red-600">
-                      <svg className="h-5 w-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      <span>{errors.document}</span>
-                    </div>
-                  )}
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
           </div>
-          
+
+          {/* Error Message */}
           {errors.submit && (
-            <div className="rounded-md bg-red-50 p-4 mb-4">
+            <div className="rounded-md bg-red-50 p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
+                  <XCircleIcon className="h-5 w-5 text-red-400" />
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-800">{errors.submit}</h3>
@@ -451,19 +342,20 @@ const AddCompanyPage = ({ isEdit = false }) => {
               </div>
             </div>
           )}
-          
-          <div className="mt-8 flex justify-end space-x-4">
+
+          {/* Submit Button */}
+          <div className="flex items-center justify-end space-x-4 pt-6">
             <button
               type="button"
               onClick={() => navigate('/companies')}
-              className="inline-flex items-center px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              className="px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center px-6 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-md disabled:opacity-50"
+              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -471,12 +363,12 @@ const AddCompanyPage = ({ isEdit = false }) => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  {isEdit ? 'Updating...' : 'Adding...'}
+                  Adding...
                 </>
               ) : (
                 <>
-                  {submitIcon}
-                  {submitButtonText}
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Add Company
                 </>
               )}
             </button>

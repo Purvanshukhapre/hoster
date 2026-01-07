@@ -88,27 +88,25 @@ export const AuthProvider = ({ children }) => {
 
   const employeeLogin = async (email, password) => {
     try {
-      // Call the employee login API using fetch
-      console.log('Attempting employee login with:', { email, password: '***masked***' });
-      const response = await authAPI.employeeLoginFetch({ email, password });
+      // Call the employee login API using axios
+      const response = await authAPI.employeeLogin({ email, password });
       
       // Handle the API response - the structure may vary
       let userData, token;
       
-      // For fetch response, the data is the response itself (not response.data)
-      if (response && typeof response === 'object') {
-        // If response has user and token properties
-        if (response.user && response.token) {
-          userData = response.user;
-          token = response.token;
+      if (response.data && typeof response.data === 'object') {
+        // If response.data has user and token properties
+        if (response.data.user && response.data.token) {
+          userData = response.data.user;
+          token = response.data.token;
         } else {
-          // If response is the user object itself with token
-          userData = response;
+          // If response.data is the user object itself
+          userData = response.data;
           // Look for token in different possible locations
-          token = response.token || response.authToken || localStorage.getItem('authToken');
+          token = response.data.token || response.data.authToken || localStorage.getItem('authToken');
         }
       } else {
-        // If response is not an object, throw an error
+        // If response.data is not an object, throw an error
         throw new Error('Invalid response format from server');
       }
       

@@ -69,29 +69,7 @@ export const authAPI = {
   // Employee login
   employeeLogin: (credentials) => api.post('/auth/login', credentials),
   
-  // Alternative employee login using fetch
-  employeeLoginFetch: async (credentials) => {
-    console.log('Making fetch request to:', `${API_BASE_URL}/auth/login`, 'with data:', credentials);
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
-    
-    console.log('Fetch response status:', response.status);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Fetch error response:', errorData);
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    console.log('Fetch response data:', data);
-    return data;
-  },
+
   
   // User registration
   registerUser: (userData) => api.post('/auth/register', userData),
@@ -124,10 +102,104 @@ export const companyAPI = {
   getCompanyById: (id) => api.get(`/companies/${id}`),
   
   // Add a new company
-  addCompany: (companyData) => api.post('/companies', companyData),
+  addCompany: (companyData) => {
+    // Check if there are documents to handle as multipart form data
+    if (companyData.uploadDocument && Array.isArray(companyData.uploadDocument) && companyData.uploadDocument.length > 0) {
+      const formData = new FormData();
+      
+      // Add all fields to form data according to backend expectations
+      formData.append('companyName', companyData.name || '');
+      formData.append('companyEmail', companyData.email || '');
+      formData.append('contactPerson', companyData.contactPerson || 'N/A');
+      formData.append('websiteUrl', companyData.website || '');
+      formData.append('industry', companyData.industry || 'Technology');
+      formData.append('tags', companyData.tags || '');
+      formData.append('status', companyData.status || 'New');
+      
+      // Add document uploads - append each file individually
+      companyData.uploadDocument.forEach((document) => {
+        if (document instanceof File) {
+          formData.append('uploadDocument', document, document.name);
+        }
+      });
+      
+      return api.post('/companies', formData, {
+        headers: {
+          // Content-Type will be automatically set by the browser with the correct boundary
+        },
+      });
+    } else {
+      // No documents, send as regular JSON
+      const backendData = {
+        companyName: companyData.name || '',
+        companyEmail: companyData.email || '',
+        contactPerson: companyData.contactPerson || 'N/A',
+        websiteUrl: companyData.website || '',
+        industry: companyData.industry || 'Technology',
+        tags: companyData.tags || '',
+        status: companyData.status || 'New',
+      };
+      
+      // Remove undefined values to avoid issues with backend
+      Object.keys(backendData).forEach(key => {
+        if (backendData[key] === undefined) {
+          delete backendData[key];
+        }
+      });
+      
+      return api.post('/companies', backendData);
+    }
+  },
   
   // Update a company
-  updateCompany: (id, companyData) => api.put(`/companies/${id}`, companyData),
+  updateCompany: (id, companyData) => {
+    // Check if there are documents to handle as multipart form data
+    if (companyData.uploadDocument && Array.isArray(companyData.uploadDocument) && companyData.uploadDocument.length > 0) {
+      const formData = new FormData();
+      
+      // Add all fields to form data according to backend expectations
+      formData.append('companyName', companyData.companyName || '');
+      formData.append('companyEmail', companyData.companyEmail || '');
+      formData.append('contactPerson', companyData.contactPerson || 'N/A');
+      formData.append('websiteUrl', companyData.websiteUrl || '');
+      formData.append('industry', companyData.industry || 'Technology');
+      formData.append('tags', companyData.tags || '');
+      formData.append('status', companyData.status || 'New');
+      
+      // Add document uploads - append each file individually
+      companyData.uploadDocument.forEach((document) => {
+        if (document instanceof File) {
+          formData.append('uploadDocument', document, document.name);
+        }
+      });
+      
+      return api.put(`/companies/${id}`, formData, {
+        headers: {
+          // Content-Type will be automatically set by the browser with the correct boundary
+        },
+      });
+    } else {
+      // No documents, send as regular JSON
+      const backendData = {
+        companyName: companyData.companyName || '',
+        companyEmail: companyData.companyEmail || '',
+        contactPerson: companyData.contactPerson || 'N/A',
+        websiteUrl: companyData.websiteUrl || '',
+        industry: companyData.industry || 'Technology',
+        tags: companyData.tags || '',
+        status: companyData.status || 'New',
+      };
+      
+      // Remove undefined values to avoid issues with backend
+      Object.keys(backendData).forEach(key => {
+        if (backendData[key] === undefined) {
+          delete backendData[key];
+        }
+      });
+      
+      return api.put(`/companies/${id}`, backendData);
+    }
+  },
   
   // Delete a company
   deleteCompany: (id) => api.delete(`/companies/${id}`),
@@ -140,7 +212,72 @@ export const companyAPI = {
   
   // Toggle shortlist status
   toggleShortlist: (companyId, isShortlisted) => api.patch(`/companies/${companyId}/shortlist`, { isShortlisted }),
+  
+  // Get company statistics
+  getCompanyStats: () => api.get(`/companies/stats`),
 };
 
-// Export base API instance for custom calls
-export { API_BASE_URL };
+// Email API endpoints
+export const emailAPI = {
+  // Send a single email
+  sendSingleEmail: (emailData) => {
+    const formData = new FormData();
+    
+    // Add text fields
+    formData.append('companyId', emailData.companyId);
+    formData.append('subject', emailData.subject);
+    formData.append('message', emailData.message);
+    
+    // Add attachments if any
+    if (emailData.attachments && Array.isArray(emailData.attachments)) {
+      emailData.attachments.forEach((attachment) => {
+        formData.append('attachments', attachment); // Using exact field name from API spec without filename
+      });
+    }
+    
+    return api.post('/mails/send-single', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data', // Explicitly set for file uploads
+      },
+    });
+  },
+  
+  // Send a group email
+  sendGroupEmail: (emailData) => {
+    const formData = new FormData();
+    
+    // Add text fields
+    // For group emails, use companyIds[] for multiple companies
+    if (emailData.companyIds && Array.isArray(emailData.companyIds)) {
+      emailData.companyIds.forEach((companyId) => {
+        formData.append('companyIds[]', companyId);
+      });
+    }
+    formData.append('subject', emailData.subject);
+    formData.append('message', emailData.message);
+    
+    // Add attachments if any
+    if (emailData.attachments && Array.isArray(emailData.attachments)) {
+      emailData.attachments.forEach((attachment) => {
+        formData.append('attachments', attachment);
+      });
+    }
+    
+    return api.post('/mails/send-group', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data', // Explicitly set for file uploads
+      },
+    });
+  },
+  
+  // Get all sent emails
+  getMails: (page = 1, limit = 10) => {
+    return api.get(`/mails?page=${page}&limit=${limit}`);
+  },
+  
+  // Get a specific sent email by ID
+  getMailById: (id) => {
+    return api.get(`/mails/${id}`);
+  },
+};
+

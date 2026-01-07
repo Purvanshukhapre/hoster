@@ -1,5 +1,5 @@
-import React, { createContext, useReducer, useEffect } from 'react';
-import { companyAPI } from '../services/api';
+import React, { createContext, useReducer, useEffect, useCallback } from 'react';
+import { companyAPI, emailAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
 const CompanyContext = createContext();
@@ -208,7 +208,7 @@ export const CompanyProvider = ({ children }) => {
   };
 
   // Async functions that can use API
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
     // Only fetch data if user is authenticated
     if (!user) {
       dispatch({ type: 'SET_LOADING', payload: false });
@@ -245,9 +245,9 @@ export const CompanyProvider = ({ children }) => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [user]);
 
-  const addCompanyAPI = async (companyData) => {
+  const addCompanyAPI = useCallback(async (companyData) => {
     // Only allow API calls if user is authenticated
     if (!user) {
       throw new Error('User not authenticated');
@@ -256,37 +256,45 @@ export const CompanyProvider = ({ children }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const response = await companyAPI.addCompany(companyData);
-      // Fetch the updated list of companies to ensure consistency
+      
+      // Refetch companies to update the list
       const updatedResponse = await companyAPI.getCompanies();
       
-      // Handle different possible response structures
+      // Handle different possible response structures for getCompanies
       let companiesData = updatedResponse.data;
       
       // If response.data is an object with a data property containing companies array, use that
-      if (updatedResponse.data && typeof updatedResponse.data === 'object' && Array.isArray(updatedResponse.data.data)) {
+      if (updatedResponse.data && typeof updatedResponse.data === 'object' && updatedResponse.data.data !== undefined) {
         companiesData = updatedResponse.data.data;
       } else if (Array.isArray(updatedResponse.data)) {
         // If response.data is already an array
         companiesData = updatedResponse.data;
       } else {
         // Use empty array if response format is unexpected
-        console.warn('Unexpected API response format');
+        console.warn('Unexpected API response format for getCompanies');
         companiesData = [];
       }
       
       // Normalize the companies data before storing
       const normalizedCompanies = normalizeCompanies(companiesData);
       dispatch({ type: 'SET_COMPANIES', payload: normalizedCompanies });
+      
+      // Return the newly created company data
       return response.data;
     } catch (error) {
       console.error('Error adding company:', error);
+      // Check if the error has response data with specific message
+      if (error.response?.data?.message) {
+        error.message = error.response.data.message;
+      }
+      // Re-throw the error to be handled by the calling component
       throw error;
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [user]);
 
-  const updateCompanyAPI = async (id, companyData) => {
+  const updateCompanyAPI = useCallback(async (id, companyData) => {
     // Only allow API calls if user is authenticated
     if (!user) {
       throw new Error('User not authenticated');
@@ -295,19 +303,45 @@ export const CompanyProvider = ({ children }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const response = await companyAPI.updateCompany(id, companyData);
-      // Normalize the updated company data before dispatching
-      const normalizedCompany = normalizeCompany(response.data);
-      dispatch({ type: 'UPDATE_COMPANY', payload: normalizedCompany });
-      return normalizedCompany;
+      
+      // Refetch companies to update the list
+      const updatedResponse = await companyAPI.getCompanies();
+      
+      // Handle different possible response structures for getCompanies
+      let companiesData = updatedResponse.data;
+      
+      // If response.data is an object with a data property containing companies array, use that
+      if (updatedResponse.data && typeof updatedResponse.data === 'object' && updatedResponse.data.data !== undefined) {
+        companiesData = updatedResponse.data.data;
+      } else if (Array.isArray(updatedResponse.data)) {
+        // If response.data is already an array
+        companiesData = updatedResponse.data;
+      } else {
+        // Use empty array if response format is unexpected
+        console.warn('Unexpected API response format for getCompanies');
+        companiesData = [];
+      }
+      
+      // Normalize the companies data before storing
+      const normalizedCompanies = normalizeCompanies(companiesData);
+      dispatch({ type: 'SET_COMPANIES', payload: normalizedCompanies });
+      
+      // Return the updated company data
+      return response.data;
     } catch (error) {
       console.error('Error updating company:', error);
+      // Check if the error has response data with specific message
+      if (error.response?.data?.message) {
+        error.message = error.response.data.message;
+      }
+      // Re-throw the error to be handled by the calling component
       throw error;
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [user]);
 
-  const deleteCompanyAPI = async (id) => {
+  const deleteCompanyAPI = useCallback(async (id) => {
     // Only allow API calls if user is authenticated
     if (!user) {
       throw new Error('User not authenticated');
@@ -323,9 +357,9 @@ export const CompanyProvider = ({ children }) => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [user]);
 
-  const addResponseAPI = async (companyId, response) => {
+  const addResponseAPI = useCallback(async (companyId, response) => {
     // Only allow API calls if user is authenticated
     if (!user) {
       throw new Error('User not authenticated');
@@ -348,9 +382,9 @@ export const CompanyProvider = ({ children }) => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [user]);
 
-  const addRequirementsAPI = async (companyId, requirements) => {
+  const addRequirementsAPI = useCallback(async (companyId, requirements) => {
     // Only allow API calls if user is authenticated
     if (!user) {
       throw new Error('User not authenticated');
@@ -373,9 +407,9 @@ export const CompanyProvider = ({ children }) => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [user]);
 
-  const toggleShortlistAPI = async (companyId, isShortlisted) => {
+  const toggleShortlistAPI = useCallback(async (companyId, isShortlisted) => {
     // Only allow API calls if user is authenticated
     if (!user) {
       throw new Error('User not authenticated');
@@ -398,10 +432,10 @@ export const CompanyProvider = ({ children }) => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [user]);
 
   // Get a single company by ID
-  const getCompanyById = async (id) => {
+  const getCompanyById = useCallback(async (id) => {
     // Only allow API calls if user is authenticated
     if (!user) {
       throw new Error('User not authenticated');
@@ -420,7 +454,83 @@ export const CompanyProvider = ({ children }) => {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [user]);
+
+  // Send a single email
+  const sendSingleEmailAPI = useCallback(async (emailData) => {
+    // Only allow API calls if user is authenticated
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const response = await emailAPI.sendSingleEmail(emailData);
+      return response.data;
+    } catch (error) {
+      console.error('Error sending single email:', error);
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [user]);
+  
+  // Send a group email
+  const sendGroupEmailAPI = useCallback(async (emailData) => {
+    // Only allow API calls if user is authenticated
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const response = await emailAPI.sendGroupEmail(emailData);
+      return response.data;
+    } catch (error) {
+      console.error('Error sending group email:', error);
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [user]);
+  
+  // Get all sent emails
+  const getMailsAPI = useCallback(async (page = 1, limit = 10) => {
+    // Only allow API calls if user is authenticated
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const response = await emailAPI.getMails(page, limit);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching emails:', error);
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [user]);
+  
+  // Get a specific sent email by ID
+  const getMailByIdAPI = useCallback(async (id) => {
+    // Only allow API calls if user is authenticated
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const response = await emailAPI.getMailById(id);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching email by ID:', error);
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [user]);
 
   return (
     <CompanyContext.Provider value={{
@@ -440,7 +550,12 @@ export const CompanyProvider = ({ children }) => {
       deleteCompanyAPI,
       addResponseAPI,
       addRequirementsAPI,
-      toggleShortlistAPI
+      toggleShortlistAPI,
+      // Email API functions
+      sendSingleEmail: sendSingleEmailAPI,
+      sendGroupEmail: sendGroupEmailAPI,
+      getMails: getMailsAPI,
+      getMailById: getMailByIdAPI
     }}>
       {children}
     </CompanyContext.Provider>

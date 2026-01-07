@@ -14,8 +14,7 @@ import {
   MagnifyingGlassIcon,
   ChevronDownIcon,
   FunnelIcon,
-  XCircleIcon,
-  HeartIcon
+  XCircleIcon
 } from '@heroicons/react/24/outline';
 
 const SortIndicator = ({ sortField, currentField, sortDirection }) => {
@@ -29,25 +28,10 @@ const SortIndicator = ({ sortField, currentField, sortDirection }) => {
   );
 };
 
-const CompaniesPage = () => {
-  const { companies, loading, fetchCompanies } = useCompanyContext();
+const ShortlistPage = () => {
+  const { companies, loading, fetchCompanies, toggleShortlist } = useCompanyContext();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('All');
   const [sortField, setSortField] = useState('name');
-
-  const { updateCompanyAPI } = useCompanyContext();
-  
-  const handleToggleShortlist = async (company) => {
-    try {
-      // Toggle the status between Shortlisted and previous status
-      const newStatus = company.status === 'Shortlisted' ? 'Responded' : 'Shortlisted';
-      
-      // Update the company status
-      await updateCompanyAPI(company.id, { ...company, status: newStatus });
-    } catch (error) {
-      console.error('Error toggling shortlist:', error);
-    }
-  };
   const [sortDirection, setSortDirection] = useState('asc');
   const navigate = useNavigate();
 
@@ -55,8 +39,12 @@ const CompaniesPage = () => {
     fetchCompanies();
   }, [fetchCompanies]);
 
+  const shortlistedCompanies = useMemo(() => {
+    return (companies || []).filter(company => company.status === 'Shortlisted');
+  }, [companies]);
+
   const filteredCompanies = useMemo(() => {
-    let filtered = companies || [];
+    let filtered = shortlistedCompanies;
 
     // Apply search filter
     if (searchTerm) {
@@ -65,11 +53,6 @@ const CompaniesPage = () => {
         company.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         company.contactPerson.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    }
-
-    // Apply status filter
-    if (filterStatus !== 'All') {
-      filtered = filtered.filter(company => company.status === filterStatus);
     }
 
     // Apply sorting - create a copy to avoid mutating the original array
@@ -91,7 +74,7 @@ const CompaniesPage = () => {
     });
 
     return sortedFiltered;
-  }, [companies, searchTerm, filterStatus, sortField, sortDirection]);
+  }, [shortlistedCompanies, searchTerm, sortField, sortDirection]);
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -130,6 +113,15 @@ const CompaniesPage = () => {
     }
   };
 
+  const handleToggleShortlist = async (company) => {
+    try {
+      // Toggle the shortlist status
+      await toggleShortlist(company.id, !company.isShortlisted);
+    } catch (error) {
+      console.error('Error toggling shortlist:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -142,73 +134,16 @@ const CompaniesPage = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Companies</h1>
-          <p className="text-gray-600 mt-1">Manage and track all your company contacts</p>
+          <h1 className="text-3xl font-bold text-gray-900">Shortlisted Companies</h1>
+          <p className="text-gray-600 mt-1">Companies that have been shortlisted for further consideration</p>
         </div>
         <button
-          onClick={() => navigate('/add-company')}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+          onClick={() => navigate('/companies')}
+          className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200"
         >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Add Company
+          <BuildingOfficeIcon className="h-5 w-5 mr-2" />
+          All Companies
         </button>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-blue-100">
-              <BuildingOfficeIcon className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Companies</p>
-              <p className="text-2xl font-bold text-gray-900">{companies?.length || 0}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-green-100">
-              <CheckCircleIcon className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Responded</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {companies?.filter(c => c.status === 'Responded' || c.status === 'Shortlisted').length || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-yellow-100">
-              <EnvelopeIcon className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Contacted</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {companies?.filter(c => c.status !== 'New').length || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-indigo-100">
-              <UserGroupIcon className="h-6 w-6 text-indigo-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Shortlisted</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {companies?.filter(c => c.status === 'Shortlisted').length || 0}
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Filters and Search */}
@@ -220,7 +155,7 @@ const CompaniesPage = () => {
             </div>
             <input
               type="text"
-              placeholder="Search companies..."
+              placeholder="Search shortlisted companies..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -228,28 +163,15 @@ const CompaniesPage = () => {
           </div>
           
           <div className="flex gap-3">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="block px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="All">All Status</option>
-              <option value="New">New</option>
-              <option value="Contacted">Contacted</option>
-              <option value="Responded">Responded</option>
-              <option value="Shortlisted">Shortlisted</option>
-              <option value="Rejected">Rejected</option>
-            </select>
-            
-            <button className="flex items-center px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-              <FunnelIcon className="h-5 w-5 text-gray-600 mr-2" />
-              Filter
-            </button>
+            <div className="flex items-center px-3 py-2 border border-gray-300 rounded-lg">
+              <UserGroupIcon className="h-5 w-5 text-indigo-600 mr-2" />
+              <span className="text-sm font-medium">{filteredCompanies.length} Shortlisted</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Companies Table */}
+      {/* Shortlisted Companies Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -330,14 +252,6 @@ const CompaniesPage = () => {
                       <span className="ml-1">{company.status}</span>
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleToggleShortlist(company)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(company.status === 'Shortlisted' ? 'Shortlisted' : 'New')}`}
-                    >
-                      {company.status === 'Shortlisted' ? 'Unshortlist' : 'Shortlist'}
-                    </button>
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => navigate(`/companies/${company.id}`)}
@@ -346,10 +260,10 @@ const CompaniesPage = () => {
                       View
                     </button>
                     <button
-                      onClick={() => navigate(`/companies/${company.id}/edit`)}
-                      className="text-indigo-600 hover:text-indigo-900"
+                      onClick={() => handleToggleShortlist(company)}
+                      className="text-red-600 hover:text-red-900"
                     >
-                      Edit
+                      Unshortlist
                     </button>
                   </td>
                 </tr>
@@ -360,18 +274,18 @@ const CompaniesPage = () => {
         
         {filteredCompanies.length === 0 && (
           <div className="text-center py-12">
-            <BuildingOfficeIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No companies</h3>
+            <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No shortlisted companies</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Get started by creating a new company.
+              Companies you shortlist will appear here.
             </p>
             <div className="mt-6">
               <button
-                onClick={() => navigate('/add-company')}
+                onClick={() => navigate('/companies')}
                 className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
               >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                Add Company
+                <BuildingOfficeIcon className="h-5 w-5 mr-2" />
+                Browse Companies
               </button>
             </div>
           </div>
@@ -381,4 +295,4 @@ const CompaniesPage = () => {
   );
 };
 
-export default CompaniesPage;
+export default ShortlistPage;

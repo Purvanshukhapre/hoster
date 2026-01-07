@@ -41,7 +41,7 @@ const CompanyDetailsPage = () => {
           // Normalize the company data to match expected format
           const companyData = {
             ...response.data.data,
-            id: response.data.data._id || response.data.data.id,
+            id: response.data.data._id || response.data.data.id, // Keep ID for internal operations but don't display
             name: response.data.data.companyName || response.data.data.name || 'Unnamed Company',
             website: response.data.data.websiteUrl || response.data.data.website || '#',
             email: response.data.data.companyEmail || response.data.data.email || 'N/A',
@@ -153,7 +153,7 @@ const CompanyDetailsPage = () => {
                   {company.name}
                 </h3>
                 <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                  Company Details
+                  Business Profile
                 </p>
               </div>
               <div className="flex space-x-3">
@@ -189,13 +189,13 @@ const CompanyDetailsPage = () => {
           <div className="px-4 py-5 sm:p-6">
             {/* Company Overview */}
             <div className="mb-8">
-              <h4 className="text-lg font-medium text-gray-900 mb-4">Company Overview</h4>
+              <h4 className="text-lg font-medium text-gray-900 mb-4">Business Overview</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h5 className="text-sm font-medium text-gray-500">Basic Information</h5>
                   <dl className="mt-2 space-y-2">
                     <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Name</dt>
+                      <dt className="text-sm text-gray-600">Business Name</dt>
                       <dd className="text-sm text-gray-900">{company.name}</dd>
                     </div>
                     <div className="flex justify-between">
@@ -265,7 +265,7 @@ const CompanyDetailsPage = () => {
 
             {/* Requirements */}
             <div className="mb-8">
-              <h4 className="text-lg font-medium text-gray-900 mb-4">Requirements</h4>
+              <h4 className="text-lg font-medium text-gray-900 mb-4">Job Requirements</h4>
               <div className="bg-gray-50 p-4 rounded-md">
                 <p className="text-sm text-gray-600 mb-2">Job Title: {company.jobTitle || 'N/A'}</p>
                 <p className="text-sm text-gray-600 mb-2">Job Description: {company.jobDescription || 'N/A'}</p>
@@ -277,7 +277,7 @@ const CompanyDetailsPage = () => {
 
             {/* Responses */}
             <div className="mb-8">
-              <h4 className="text-lg font-medium text-gray-900 mb-4">Responses</h4>
+              <h4 className="text-lg font-medium text-gray-900 mb-4">Applications</h4>
               {company.responses && company.responses.length > 0 ? (
                 <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
                   <table className="min-w-full divide-y divide-gray-300">

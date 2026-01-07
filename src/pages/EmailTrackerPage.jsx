@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useCompanyContext } from '../hooks/useCompanyContext';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -12,55 +12,79 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon,
   ChevronDownIcon,
-  PaperAirplaneIcon
+  PaperAirplaneIcon,
+  PaperClipIcon,
+  UserIcon,
+  CalendarIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const EmailTrackerPage = () => {
-  const { companies, loading } = useCompanyContext();
+  const { getMails, getMailById, loading } = useCompanyContext();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('All');
+  const [emails, setEmails] = useState([]);
+  const [emailsLoading, setEmailsLoading] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState(null);
 
-  // Flatten all email interactions from companies
+  // Fetch actual sent emails from the backend
+  useEffect(() => {
+    const fetchEmails = async () => {
+      try {
+        setEmailsLoading(true);
+        const response = await getMails(1, 100); // Fetch 100 emails, page 1
+        
+        // Handle different possible response structures
+        let emailsData = response;
+        if (response && typeof response === 'object' && response.data !== undefined) {
+          emailsData = response.data;
+        }
+        
+        // Handle the API response format from backend
+        // The API returns { success: true, mails: [...], totalPages, currentPage, totalMails }
+        if (emailsData && emailsData.mails !== undefined) {
+          setEmails(emailsData.mails);
+        } else if (Array.isArray(emailsData)) {
+          // Fallback to array if direct array is returned
+          setEmails(emailsData);
+        } else {
+          setEmails([]);
+        }
+      } catch (error) {
+        console.error('Error fetching emails:', error);
+        setEmails([]);
+      } finally {
+        setEmailsLoading(false);
+      }
+    };
+
+    fetchEmails();
+  }, [getMails]);
+
+  // Process emails for display
   const allEmails = useMemo(() => {
-    let emails = [];
+    if (!emails || !Array.isArray(emails)) {
+      return [];
+    }
     
-    companies.forEach(company => {
-      // Add sent emails (based on status changes)
-      if (company.status !== 'New' && company.dateAdded) {
-        emails.push({
-          id: `sent-${company.id}`,
-          type: 'sent',
-          subject: `Outreach to ${company.name}`,
-          company: company.name,
-          email: company.email,
-          date: company.dateAdded,
-          status: 'sent',
-          companyId: company.id
-        });
-      }
-      
-      // Add responses
-      if (company.responses && company.responses.length > 0) {
-        company.responses.forEach(response => {
-          emails.push({
-            id: `resp-${company.id}-${response.id}`,
-            type: 'response',
-            subject: response.subject,
-            company: company.name,
-            email: company.email,
-            date: response.date,
-            status: 'received',
-            content: response.content,
-            companyId: company.id
-          });
-        });
-      }
-    });
-    
-    return emails;
-  }, [companies]);
+    return emails.map(email => ({
+      id: email._id || email.id,
+      type: email.recipientType || 'sent',
+      subject: email.subject,
+      company: email.companyIds && email.companyIds.length > 0 ? email.companyIds[0].companyName : 'Unknown Company',
+      email: email.recipients && email.recipients.length > 0 ? email.recipients[0] : 'N/A',
+      date: email.sentAt || email.createdAt || email.date || new Date().toISOString().split('T')[0],
+      status: 'sent', // All emails in this list are sent emails
+      sender: email.senderEmail,
+      messageId: email.messageId,
+      companyId: email.companyIds && email.companyIds.length > 0 ? email.companyIds[0]._id : null
+    }));
+  }, [emails]);
 
   // Filter and search emails
   const filteredEmails = useMemo(() => {
@@ -77,7 +101,7 @@ const EmailTrackerPage = () => {
 
     // Apply status filter
     if (statusFilter !== 'All') {
-      filtered = filtered.filter(email => email.status === statusFilter.toLowerCase());
+      filtered = filtered.filter(() => true); // All emails in this tracker are sent emails
     }
 
     // Apply date filter
@@ -135,9 +159,9 @@ const EmailTrackerPage = () => {
 
   const emailStats = useMemo(() => {
     const totalEmails = allEmails.length;
-    const sentEmails = allEmails.filter(email => email.type === 'sent').length;
-    const receivedEmails = allEmails.filter(email => email.type === 'response').length;
-    const responseRate = sentEmails > 0 ? Math.round((receivedEmails / sentEmails) * 100) : 0;
+    const sentEmails = allEmails.length; // All emails in this list are sent emails
+    const receivedEmails = 0; // This email tracker only shows sent emails
+    const responseRate = 0; // Response rate cannot be calculated from this view
 
     return {
       totalEmails,
@@ -147,11 +171,49 @@ const EmailTrackerPage = () => {
     };
   }, [allEmails]);
 
-  const statusOptions = ['All', 'Sent', 'Received'];
+  const statusOptions = ['All', 'Sent'];
   const dateOptions = ['All', 'Today', 'This Week', 'This Month'];
 
+  const openEmailModal = async (emailId) => {
+    try {
+      setModalLoading(true);
+      setModalError(null);
+      
+      const response = await getMailById(emailId);
+      
+      // Handle different possible response structures
+      let emailData = response;
+      if (response && typeof response === 'object') {
+        // If response has data property (Axios response)
+        if (response.data !== undefined) {
+          emailData = response.data;
+        }
+        // If response has success and mail properties (our API format)
+        if (response.success === true && response.mail) {
+          emailData = response.mail;
+        } else if (response.success === true && response.data) {
+          emailData = response.data;
+        }
+      }
+      
+      setSelectedEmail(emailData);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching email details:', error);
+      setModalError('Failed to load email details');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedEmail(null);
+    setModalError(null);
+  };
+
   // Show loading state while data is being fetched
-  if (loading) {
+  if (loading || emailsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
         <div className="text-center">
@@ -309,7 +371,7 @@ const EmailTrackerPage = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredEmails.length > 0 ? (
                 filteredEmails.map((email) => (
-                  <tr key={email.id} className="hover:bg-gray-50 transition-colors duration-150">
+                  <tr key={email.id} className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer" onClick={() => openEmailModal(email.id)}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-8 w-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
@@ -390,7 +452,163 @@ const EmailTrackerPage = () => {
           </div>
         </div>
       )}
+      {/* Email Detail Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={closeModal}></div>
+            </div>
+              
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+              
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-2xl leading-6 font-bold text-gray-900 mb-4">
+                        Email Details
+                      </h3>
+                      <button
+                        onClick={closeModal}
+                        className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                      >
+                        <XMarkIcon className="h-6 w-6" />
+                      </button>
+                    </div>
+                      
+                    {modalLoading ? (
+                      <div className="flex justify-center items-center py-8">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                      </div>
+                    ) : modalError ? (
+                      <div className="rounded-md bg-red-50 p-4">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            <XCircleIcon className="h-5 w-5 text-red-400" />
+                          </div>
+                          <div className="ml-3">
+                            <h3 className="text-sm font-medium text-red-800">{modalError}</h3>
+                          </div>
+                        </div>
+                      </div>
+                    ) : selectedEmail ? (
+                      <div className="space-y-6">
+                        {/* Email Header */}
+                        <div className="border-b border-gray-200 pb-4">
+                          <h4 className="text-lg font-semibold text-gray-900">{selectedEmail.subject}</h4>
+                          <div className="mt-2 flex items-center text-sm text-gray-500">
+                            <UserIcon className="w-4 h-4 mr-2" />
+                            <span>From: {selectedEmail.senderEmail} ({selectedEmail.senderRole})</span>
+                          </div>
+                          <div className="mt-1 flex items-center text-sm text-gray-500">
+                            <CalendarIcon className="w-4 h-4 mr-2" />
+                            <span>Sent: {new Date(selectedEmail.sentAt).toLocaleString()}</span>
+                          </div>
+                        </div>
+                                          
+                        {/* Recipients */}
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-900 mb-2">Recipients</h5>
+                          <div className="bg-gray-50 rounded-lg p-3">
+                            {selectedEmail.recipients && selectedEmail.recipients.map((recipient, index) => (
+                              <div key={index} className="flex items-center">
+                                <UserIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                <span className="text-sm text-gray-700">{recipient}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                                          
+                        {/* Company Information */}
+                        {selectedEmail.companyIds && selectedEmail.companyIds.length > 0 && (
+                          <div>
+                            <h5 className="text-sm font-medium text-gray-900 mb-2">Company</h5>
+                            <div className="space-y-2">
+                              {selectedEmail.companyIds.map((company, index) => (
+                                <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                                    <span className="text-white font-bold text-xs">{company.companyName?.charAt(0)}</span>
+                                  </div>
+                                  <div className="ml-3">
+                                    <p className="text-sm font-medium text-gray-900">{company.companyName}</p>
+                                    <p className="text-xs text-gray-500">{company.companyEmail}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                                          
+                        {/* Email Content */}
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-900 mb-2">Message</h5>
+                          <div className="bg-gray-50 rounded-lg p-4 min-h-[100px]">
+                            <p className="text-gray-700 whitespace-pre-wrap">
+                              {selectedEmail.message || selectedEmail.content || selectedEmail.text || 'No email content available.'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Attachments */}
+                        {selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
+                          <div>
+                            <h5 className="text-sm font-medium text-gray-900 mb-2">Attachments</h5>
+                            <div className="space-y-2">
+                              {selectedEmail.attachments.map((attachment, index) => (
+                                <div key={index} className="flex items-center p-3 border border-gray-200 rounded-lg">
+                                  <PaperClipIcon className="w-5 h-5 text-gray-500 mr-3" />
+                                  <div className="flex-1">
+                                    <p className="font-medium text-gray-900 text-sm">{attachment.filename}</p>
+                                    <p className="text-xs text-gray-500">{(attachment.size || attachment.fileSize) ? ((attachment.size || attachment.fileSize) / 1024).toFixed(2) : 'N/A'} KB</p>
+                                  </div>
+                                  <a 
+                                    href={attachment.url || attachment.path || attachment.downloadUrl || '#'} 
+                                    download
+                                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Download
+                                  </a>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                                          
+                        {/* Additional Information */}
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium text-gray-900">Type:</span>
+                            <p className="text-gray-600 capitalize">{selectedEmail.recipientType}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-900">Message ID:</span>
+                            <p className="text-gray-600 break-all text-xs">{selectedEmail.messageId}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={closeModal}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+
   );
 };
 

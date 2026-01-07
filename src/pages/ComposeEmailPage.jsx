@@ -1,204 +1,83 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCompanyContext } from '../hooks/useCompanyContext';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeftIcon, PaperAirplaneIcon, DocumentTextIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+
+import { 
+  EnvelopeIcon, 
+  UserIcon, 
+  DocumentTextIcon, 
+  PaperClipIcon, 
+  ArrowLeftIcon, 
+  TrashIcon,
+  DocumentIcon,
+  XCircleIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  PaperAirplaneIcon,
+  UserGroupIcon
+} from '@heroicons/react/24/outline';
 
 const ComposeEmailPage = () => {
-  const { companies, addResponse, loading } = useCompanyContext();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const companyId = searchParams.get('companyId');
+  const { companies, sendSingleEmail, sendGroupEmail } = useCompanyContext();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [selectedCompanies, setSelectedCompanies] = useState([]);
   
-  // Mock email templates
-  const emailTemplates = [
-    {
-      id: 1,
-      name: 'Initial Outreach',
-      subject: 'Partnership Opportunity with [Company Name]',
-      body: `Hi [Company Name] Team,
-
-I hope this email finds you well. I'm reaching out from [Your Company] to explore potential partnership opportunities. We specialize in [Your Services] and believe there might be synergies between our organizations.
-
-Would you be interested in a brief call to discuss how we might collaborate?
-
-Best regards,
-[Your Name]`
-    },
-    {
-      id: 2,
-      name: 'Follow-up',
-      subject: 'Follow-up: Partnership Opportunity',
-      body: `Hi [Company Name] Team,
-
-I wanted to follow up on my previous email about potential partnership opportunities. I understand you might be busy, but I'd appreciate any thoughts on our proposal.
-
-Looking forward to hearing from you.
-
-Best regards,
-[Your Name]`
-    },
-    {
-      id: 3,
-      name: 'Technical Discussion',
-      subject: 'Technical Collaboration Opportunity',
-      body: `Hi [Company Name] Team,
-
-I hope this email finds you well. I've been following your work in [Industry] and am impressed by your recent projects.
-
-We're currently looking for partners with technical expertise in [Tech Stack] and believe your team might be a great fit for a potential collaboration.
-
-Would you be available for a technical discussion?
-
-Best regards,
-[Your Name]`
-    }
-  ];
-
-  // Find the selected company based on URL parameter
-  const selectedCompanyFromParams = useMemo(() => {
-    if (companyId) {
-      return companies.find(c => c.id === parseInt(companyId));
-    }
-    return null;
-  }, [companyId, companies]);
-
-  // Initialize form data with company email if available
-  const initialFormData = useMemo(() => ({
-    to: selectedCompanyFromParams?.email || '',
+  // Individual email form state
+  const [individualEmail, setIndividualEmail] = useState({
     subject: '',
-    body: ''
-  }), [selectedCompanyFromParams]);
-
-  const [formData, setFormData] = useState(initialFormData);
+    message: ''
+  });
   
-  const [selectedTemplate, setSelectedTemplate] = useState('');
-  const [errors, setErrors] = useState({});
-  const [isSending, setIsSending] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+  // Group email form state
+  const [groupEmail, setGroupEmail] = useState({
+    subject: '',
+    message: ''
+  });
+  
   const [attachments, setAttachments] = useState([]);
+  const [individualErrors, setIndividualErrors] = useState({});
+  const [groupErrors, setGroupErrors] = useState({});
+  const [individualLoading, setIndividualLoading] = useState(false);
+  const [groupLoading, setGroupLoading] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const fileInputRef = useRef(null);
 
-  const handleTemplateSelect = (template) => {
-    setSelectedTemplate(template.id);
-    setFormData(prev => ({
-      ...prev,
-      subject: template.subject.replace('[Company Name]', selectedCompanyFromParams?.name || ''),
-      body: template.body.replace('[Company Name]', selectedCompanyFromParams?.name || '')
-        .replace('[Your Company]', 'Elite Outreach')
-        .replace('[Your Services]', 'software development and partnership opportunities')
-        .replace('[Your Name]', 'Elite Outreach Team')
-        .replace('[Industry]', selectedCompanyFromParams?.industry || 'your industry')
-        .replace('[Tech Stack]', selectedCompanyFromParams?.document?.name || 'relevant technologies')
-    }));
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  // Filter companies based on search term and filter
+  const filteredCompanies = useMemo(() => {
+    if (!companies) return [];
     
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.to.trim()) {
-      newErrors.to = 'Recipient email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.to)) {
-      newErrors.to = 'Recipient email is invalid';
-    }
-    
-    if (!formData.subject.trim()) {
-      newErrors.subject = 'Subject is required';
-    }
-    
-    if (!formData.body.trim()) {
-      newErrors.body = 'Email body is required';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
-    setIsSending(true);
-    
-    // Simulate email sending
-    setTimeout(() => {
-      if (companyId) {
-        const response = {
-          id: Date.now(),
-          date: new Date().toISOString().split('T')[0],
-          subject: formData.subject,
-          content: formData.body,
-          attachments: attachments.map(attachment => ({
-            name: attachment.name,
-            size: attachment.size,
-            type: attachment.type
-          }))
-        };
-        
-        addResponse(parseInt(companyId), response);
-      }
+    return companies.filter(company => {
+      const matchesSearch = company.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           company.email.toLowerCase().includes(searchTerm.toLowerCase());
       
-      setIsSending(false);
-      setSuccessMessage('Email sent successfully!');
+      if (filter === 'all') return matchesSearch;
+      if (filter === 'responded') return matchesSearch && company.status === 'Responded';
+      if (filter === 'not-responded') return matchesSearch && company.status !== 'Responded';
       
-      // Reset form after successful send
-      setTimeout(() => {
-        setFormData({
-          to: selectedCompanyFromParams?.email || '',
-          subject: '',
-          body: ''
-        });
-        setAttachments([]);
-        setSuccessMessage('');
-      }, 3000);
-    }, 1500);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      to: selectedCompanyFromParams?.email || '',
-      subject: '',
-      body: ''
+      return matchesSearch;
     });
-    setSelectedTemplate('');
-    setErrors({});
-    setAttachments([]);
-  };
-  
+  }, [companies, searchTerm, filter]);
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    
-    // Add new files to the existing attachments
-    const newAttachments = files.map(file => ({
-      id: Date.now() + Math.random(), // Unique ID for each file
-      file: file,
-      name: file.name,
-      size: file.size,
-      type: file.type
-    }));
-    
+    const newAttachments = files
+      .filter(file => file instanceof File)  // Only process actual File objects
+      .map(file => ({
+        id: Date.now() + Math.random(),
+        file: file,
+        name: file.name,
+        size: file.size,
+        type: file.type
+      }));
     setAttachments(prev => [...prev, ...newAttachments]);
   };
-  
+
   const removeAttachment = (id) => {
     setAttachments(prev => prev.filter(attachment => attachment.id !== id));
   };
-  
+
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -207,278 +86,582 @@ Best regards,
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Show loading state while data is being fetched
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading email data...</p>
-        </div>
-      </div>
-    );
-  }
-  
+  const handleIndividualSubmit = async (companyId) => {
+    // Set the form data for individual email
+    const errors = {};
+    
+    if (!individualEmail.subject.trim()) errors.subject = 'Subject is required';
+    if (!individualEmail.message.trim()) errors.message = 'Message is required';
+    
+    setIndividualErrors(errors);
+    
+    if (Object.keys(errors).length > 0) return;
+    
+    setIndividualLoading(true);
+    try {
+      // Prepare email data for API call
+      const emailData = {
+        companyId,
+        subject: individualEmail.subject,
+        message: individualEmail.message,
+        attachments: attachments.filter(attachment => attachment.file instanceof File).map(attachment => attachment.file)
+      };
+      
+      // Send email via API
+      await sendSingleEmail(emailData);
+      alert('Email sent successfully!');
+      
+      // Reset form
+      setIndividualEmail({ subject: '', message: '' });
+      setAttachments([]);
+    } catch (error) {
+      console.error('Error sending email:', error);
+      setIndividualErrors({ submit: error.message || 'Failed to send email. Please try again.' });
+    } finally {
+      setIndividualLoading(false);
+    }
+  };
+
+  const [individualModalOpen, setIndividualModalOpen] = useState(false);
+  const [currentCompanyId, setCurrentCompanyId] = useState(null);
+
+  const openIndividualEmailModal = (companyId) => {
+    setCurrentCompanyId(companyId);
+    setIndividualModalOpen(true);
+  };
+
+  const closeIndividualEmailModal = () => {
+    setIndividualModalOpen(false);
+    setCurrentCompanyId(null);
+    setIndividualEmail({ subject: '', message: '' });
+  };
+
+  const handleGroupSubmit = async () => {
+    const errors = {};
+    
+    if (!groupEmail.subject.trim()) errors.subject = 'Subject is required';
+    if (!groupEmail.message.trim()) errors.message = 'Message is required';
+    if (selectedCompanies.length === 0) errors.companies = 'Please select at least one company';
+    
+    setGroupErrors(errors);
+    
+    if (Object.keys(errors).length > 0) return;
+    
+    setGroupLoading(true);
+    try {
+      // Prepare email data for API call
+      const emailData = {
+        companyIds: selectedCompanies,
+        subject: groupEmail.subject,
+        message: groupEmail.message,
+        attachments: attachments.filter(attachment => attachment.file instanceof File).map(attachment => attachment.file)
+      };
+      
+      // Send group email via API
+      await sendGroupEmail(emailData);
+      alert('Group email sent successfully!');
+      
+      // Reset form
+      setGroupEmail({ subject: '', message: '' });
+      setSelectedCompanies([]);
+      setAttachments([]);
+      setShowGroupModal(false);
+    } catch (error) {
+      console.error('Error sending group email:', error);
+      setGroupErrors({ submit: error.message || 'Failed to send group email. Please try again.' });
+    } finally {
+      setGroupLoading(false);
+    }
+  };
+
+  const toggleCompanySelection = (companyId) => {
+    setSelectedCompanies(prev => {
+      if (prev.includes(companyId)) {
+        return prev.filter(id => id !== companyId);
+      } else {
+        return [...prev, companyId];
+      }
+    });
+  };
+
+  const selectAllCompanies = () => {
+    setSelectedCompanies(filteredCompanies.map(company => company.id));
+  };
+
+  const clearAllSelections = () => {
+    setSelectedCompanies([]);
+  };
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Compose Email</h1>
+          <p className="text-gray-600 mt-1">Send emails to your company contacts</p>
+        </div>
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200"
+          className="flex items-center px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
         >
-          <ArrowLeftIcon className="h-4 w-4 mr-1" />
-          Back to Companies
+          <ArrowLeftIcon className="h-5 w-5 mr-2" />
+          Back
         </button>
       </div>
-      
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-white">Compose Email</h2>
-              {selectedCompanyFromParams && (
-                <p className="mt-1 text-sm text-blue-100">
-                  Sending to: <span className="font-medium">{selectedCompanyFromParams.name}</span> ({selectedCompanyFromParams.email})
-                </p>
-              )}
+
+      {/* Search and Filter Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
             </div>
-            <div className="p-2 bg-white/20 rounded-lg">
-              <PaperAirplaneIcon className="h-6 w-6 text-white" />
+            <input
+              type="text"
+              placeholder="Search companies..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FunnelIcon className="h-5 w-5 text-gray-400" />
+            </div>
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Companies</option>
+              <option value="responded">Responded</option>
+              <option value="not-responded">Not Responded</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Companies List */}
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Companies ({filteredCompanies.length})</h2>
+            <p className="text-gray-600 mt-1">Select companies to send individual or group emails</p>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={selectAllCompanies}
+              className="px-4 py-2 text-sm bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:from-gray-600 hover:to-gray-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center"
+            >
+              <UserIcon className="h-4 w-4 mr-1" />
+              Select All
+            </button>
+            <button
+              onClick={clearAllSelections}
+              className="px-4 py-2 text-sm bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800 rounded-lg hover:from-gray-400 hover:to-gray-500 transition-all duration-200 shadow-md hover:shadow-lg flex items-center"
+            >
+              <TrashIcon className="h-4 w-4 mr-1" />
+              Clear All
+            </button>
+            <button
+              onClick={() => setShowGroupModal(true)}
+              disabled={selectedCompanies.length === 0}
+              className="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center shadow-md hover:shadow-lg"
+            >
+              <UserGroupIcon className="h-4 w-4 mr-1" />
+              Send Group Email ({selectedCompanies.length})
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+          {filteredCompanies.length > 0 ? (
+            filteredCompanies.map(company => (
+              <div key={company.id} className="flex items-center justify-between p-5 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedCompanies.includes(company.id)}
+                    onChange={() => toggleCompanySelection(company.id)}
+                    className="h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
+                  />
+                  <div className="ml-5">
+                    <h3 className="font-bold text-lg text-gray-900">{company.name}</h3>
+                    <p className="text-gray-600 flex items-center mt-1">
+                      <EnvelopeIcon className="h-4 w-4 mr-2 text-gray-500" />
+                      {company.email}
+                    </p>
+                    {company.status && (
+                      <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full mt-2 ${
+                        company.status === 'Responded' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {company.status}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => openIndividualEmailModal(company.id)}
+                  disabled={individualLoading}
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-base rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center shadow-md hover:shadow-lg transform hover:scale-105"
+                >
+                  <PaperAirplaneIcon className="h-5 w-5 mr-2" />
+                  Compose
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+              <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-gray-100">
+                <MagnifyingGlassIcon className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">No companies found</h3>
+              <p className="mt-1 text-gray-500">No companies match your search criteria.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Individual Email Modal */}
+      {individualModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={closeIndividualEmailModal}></div>
+            </div>
+            
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-2xl leading-6 font-bold text-gray-900 mb-4">
+                        Send Individual Email
+                      </h3>
+                      <button
+                        onClick={closeIndividualEmailModal}
+                        className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                      >
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="individual-subject" className="block text-sm font-medium text-gray-700 mb-2">
+                          Subject *
+                        </label>
+                        <input
+                          id="individual-subject"
+                          type="text"
+                          value={individualEmail.subject}
+                          onChange={(e) => setIndividualEmail(prev => ({ ...prev, subject: e.target.value }))}
+                          className={`block w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            individualErrors.subject ? 'border-red-300' : 'border-gray-300'
+                          }`}
+                          placeholder="Enter email subject"
+                        />
+                        {individualErrors.subject && <p className="mt-1 text-sm text-red-600">{individualErrors.subject}</p>}
+                      </div>
+
+                      <div>
+                        <label htmlFor="individual-message" className="block text-sm font-medium text-gray-700 mb-2">
+                          Message *
+                        </label>
+                        <textarea
+                          id="individual-message"
+                          rows={8}
+                          value={individualEmail.message}
+                          onChange={(e) => setIndividualEmail(prev => ({ ...prev, message: e.target.value }))}
+                          className={`block w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            individualErrors.message ? 'border-red-300' : 'border-gray-300'
+                          }`}
+                          placeholder="Type your message here..."
+                        />
+                        {individualErrors.message && <p className="mt-1 text-sm text-red-600">{individualErrors.message}</p>}
+                      </div>
+
+                      {/* Attachments */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Attachments
+                        </label>
+                        <div className="border border-gray-300 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center">
+                              <PaperClipIcon className="h-5 w-5 text-gray-400 mr-2" />
+                              <span className="text-sm font-medium text-gray-700">Add attachments</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                            >
+                              Browse Files
+                            </button>
+                            <input
+                              type="file"
+                              ref={fileInputRef}
+                              onChange={handleFileChange}
+                              className="hidden"
+                              multiple
+                            />
+                          </div>
+
+                          {/* Attachment List */}
+                          {attachments.length > 0 && (
+                            <div className="space-y-2">
+                              {attachments.map(attachment => (
+                                <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center">
+                                    {attachment.type.startsWith('image/') ? (
+                                      <DocumentIcon className="h-5 w-5 text-blue-500 mr-3" />
+                                    ) : attachment.type.startsWith('application/pdf') ? (
+                                      <DocumentIcon className="h-5 w-5 text-red-500 mr-3" />
+                                    ) : (
+                                      <DocumentIcon className="h-5 w-5 text-gray-500 mr-3" />
+                                    )}
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-900">{attachment.name}</p>
+                                      <p className="text-xs text-gray-500">{formatFileSize(attachment.size)}</p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeAttachment(attachment.id)}
+                                    className="p-1 text-gray-400 hover:text-red-500 transition-colors duration-200"
+                                  >
+                                    <TrashIcon className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {individualErrors.submit && (
+                        <div className="rounded-md bg-red-50 p-4">
+                          <div className="flex">
+                            <div className="flex-shrink-0">
+                              <XCircleIcon className="h-5 w-5 text-red-400" />
+                            </div>
+                            <div className="ml-3">
+                              <h3 className="text-sm font-medium text-red-800">{individualErrors.submit}</h3>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={() => handleIndividualSubmit(currentCompanyId)}
+                  disabled={individualLoading}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {individualLoading ? 'Sending...' : 'Send Email'}
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={closeIndividualEmailModal}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-6">
-          {/* Template Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Use Email Template
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {emailTemplates.map(template => (
-                <div
-                  key={template.id}
-                  onClick={() => handleTemplateSelect(template)}
-                  className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                    selectedTemplate === template.id
-                      ? 'border-blue-500 bg-blue-50 shadow-md'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <DocumentTextIcon className="h-5 w-5 text-blue-500 mr-2" />
-                    <div className="font-medium text-gray-900">{template.name}</div>
-                  </div>
-                  <div className="mt-2 text-sm text-gray-600 truncate">{template.subject}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          {/* To Field */}
-          <div className="mb-5">
-            <label htmlFor="to" className="block text-sm font-medium text-gray-700 mb-2">
-              To *
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <input
-                type="email"
-                name="to"
-                id="to"
-                value={formData.to}
-                onChange={handleChange}
-                className={`block w-full pl-10 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm transition-all duration-200 ${
-                  errors.to ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-                placeholder="recipient@example.com"
-              />
-              {errors.to && (
-                <div className="mt-1 flex items-center">
-                  <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  <p className="text-sm text-red-600">{errors.to}</p>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Subject Field */}
-          <div className="mb-5">
-            <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
-              Subject *
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                name="subject"
-                id="subject"
-                value={formData.subject}
-                onChange={handleChange}
-                className={`block w-full pl-10 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm transition-all duration-200 ${
-                  errors.subject ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-                placeholder="Email subject"
-              />
-              {errors.subject && (
-                <div className="mt-1 flex items-center">
-                  <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  <p className="text-sm text-red-600">{errors.subject}</p>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Body Field */}
-          <div className="mb-6">
-            <label htmlFor="body" className="block text-sm font-medium text-gray-700 mb-2">
-              Message *
-            </label>
-            <div className="relative">
-              <textarea
-                id="body"
-                name="body"
-                rows={12}
-                value={formData.body}
-                onChange={handleChange}
-                className={`block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm transition-all duration-200 ${
-                  errors.body ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-                placeholder="Write your email message here..."
-              />
-              {errors.body && (
-                <div className="mt-1 flex items-center">
-                  <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  <p className="text-sm text-red-600">{errors.body}</p>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Attachments Section */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Attachments
-            </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors duration-200">
-              <input
-                type="file"
-                id="attachments"
-                className="hidden"
-                multiple
-                onChange={handleFileChange}
-              />
-              <button
-                type="button"
-                onClick={() => document.getElementById('attachments').click()}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-              >
-                <svg className="h-5 w-5 text-gray-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                </svg>
-                Add Attachments
-              </button>
-              <p className="mt-2 text-sm text-gray-500">or drag and drop files here</p>
-              <p className="text-xs text-gray-400 mt-1">Supports PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, PNG, and other common formats</p>
+      )}
+
+
+      {/* Group Email Modal */}
+      {showGroupModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={() => setShowGroupModal(false)}></div>
             </div>
             
-            {/* Display selected attachments */}
-            {attachments.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Attachments ({attachments.length}):</h4>
-                <div className="space-y-2">
-                  {attachments.map((attachment) => (
-                    <div key={attachment.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
-                      <div className="flex items-center">
-                        <svg className="h-5 w-5 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                        </svg>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 truncate max-w-xs">{attachment.name}</p>
-                          <p className="text-xs text-gray-500">{formatFileSize(attachment.size)}</p>
-                        </div>
-                      </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-2xl leading-6 font-bold text-gray-900 mb-4">
+                        Send Group Email
+                      </h3>
                       <button
-                        type="button"
-                        onClick={() => removeAttachment(attachment.id)}
-                        className="text-red-500 hover:text-red-700"
+                        onClick={() => setShowGroupModal(false)}
+                        className="text-gray-400 hover:text-gray-600 focus:outline-none"
                       >
-                        <TrashIcon className="h-5 w-5" />
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                       </button>
                     </div>
-                  ))}
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="group-subject" className="block text-sm font-medium text-gray-700 mb-2">
+                          Subject *
+                        </label>
+                        <input
+                          id="group-subject"
+                          type="text"
+                          value={groupEmail.subject}
+                          onChange={(e) => setGroupEmail(prev => ({ ...prev, subject: e.target.value }))}
+                          className={`block w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            groupErrors.subject ? 'border-red-300' : 'border-gray-300'
+                          }`}
+                          placeholder="Enter email subject"
+                        />
+                        {groupErrors.subject && <p className="mt-1 text-sm text-red-600">{groupErrors.subject}</p>}
+                      </div>
+
+                      <div>
+                        <label htmlFor="group-message" className="block text-sm font-medium text-gray-700 mb-2">
+                          Message *
+                        </label>
+                        <textarea
+                          id="group-message"
+                          rows={8}
+                          value={groupEmail.message}
+                          onChange={(e) => setGroupEmail(prev => ({ ...prev, message: e.target.value }))}
+                          className={`block w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            groupErrors.message ? 'border-red-300' : 'border-gray-300'
+                          }`}
+                          placeholder="Type your message here..."
+                        />
+                        {groupErrors.message && <p className="mt-1 text-sm text-red-600">{groupErrors.message}</p>}
+                      </div>
+
+                      {/* Attachments */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Attachments
+                        </label>
+                        <div className="border border-gray-300 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center">
+                              <PaperClipIcon className="h-5 w-5 text-gray-400 mr-2" />
+                              <span className="text-sm font-medium text-gray-700">Add attachments</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                            >
+                              Browse Files
+                            </button>
+                            <input
+                              type="file"
+                              ref={fileInputRef}
+                              onChange={handleFileChange}
+                              className="hidden"
+                              multiple
+                            />
+                          </div>
+
+                          {/* Attachment List */}
+                          {attachments.length > 0 && (
+                            <div className="space-y-2">
+                              {attachments.map(attachment => (
+                                <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center">
+                                    {attachment.type.startsWith('image/') ? (
+                                      <DocumentIcon className="h-5 w-5 text-blue-500 mr-3" />
+                                    ) : attachment.type.startsWith('application/pdf') ? (
+                                      <DocumentIcon className="h-5 w-5 text-red-500 mr-3" />
+                                    ) : (
+                                      <DocumentIcon className="h-5 w-5 text-gray-500 mr-3" />
+                                    )}
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-900">{attachment.name}</p>
+                                      <p className="text-xs text-gray-500">{formatFileSize(attachment.size)}</p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeAttachment(attachment.id)}
+                                    className="p-1 text-gray-400 hover:text-red-500 transition-colors duration-200"
+                                  >
+                                    <TrashIcon className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Selected Companies */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Selected Companies ({selectedCompanies.length})
+                        </label>
+                        <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+                          {selectedCompanies.length > 0 ? (
+                            selectedCompanies.map(companyId => {
+                              const company = companies.find(c => c.id === companyId);
+                              return company ? (
+                                <div key={companyId} className="py-1 text-sm text-gray-700">
+                                  {company.name} - {company.email}
+                                </div>
+                              ) : null;
+                            })
+                          ) : (
+                            <p className="text-sm text-gray-500">No companies selected</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {groupErrors.submit && (
+                        <div className="rounded-md bg-red-50 p-4">
+                          <div className="flex">
+                            <div className="flex-shrink-0">
+                              <XCircleIcon className="h-5 w-5 text-red-400" />
+                            </div>
+                            <div className="ml-3">
+                              <h3 className="text-sm font-medium text-red-800">{groupErrors.submit}</h3>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-          
-          {/* Success Message */}
-          {successMessage && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-center">
-              <svg className="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              {successMessage}
-            </div>
-          )}
-          
-          {/* Action Buttons */}
-          <div className="flex justify-between items-center">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-            >
-              <ArrowPathIcon className="h-4 w-4 mr-2" />
-              Reset
-            </button>
-            
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="inline-flex items-center px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSending}
-                className="inline-flex items-center px-6 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 shadow-md"
-              >
-                {isSending ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <PaperAirplaneIcon className="h-4 w-4 mr-2" />
-                    Send Email
-                  </>
-                )}
-              </button>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleGroupSubmit}
+                  disabled={groupLoading}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {groupLoading ? 'Sending...' : 'Send Group Email'}
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => setShowGroupModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </form>
-      </div>
+        </div>
+      )}
     </div>
   );
 };
