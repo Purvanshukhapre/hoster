@@ -113,7 +113,7 @@ const MainLayout = ({ children }) => {
                 <span className="text-white font-bold text-lg">EO</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">EliteOutreach</h1>
+                <h1 className="text-xl font-bold text-gray-900">Elite Hoster</h1>
                 <p className="text-xs text-gray-500">Professional Suite</p>
               </div>
             </div>
