@@ -110,7 +110,7 @@ const MainLayout = ({ children }) => {
           <div className="flex items-center justify-between p-6 border-b border-gray-100">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg">EO</span>
+                <span className="text-white font-bold text-lg">EH</span>
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Elite Hoster</h1>
