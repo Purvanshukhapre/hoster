@@ -136,14 +136,6 @@ const DashboardPage = () => {
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-1">Welcome back, {user?.name}! Here's what's happening today.</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200">
-            Export Report
-          </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200">
-            Add Company
-          </button>
-        </div>
       </div>
 
       {/* Stats Grid */}

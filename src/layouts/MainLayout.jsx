@@ -196,16 +196,11 @@ const MainLayout = ({ children }) => {
               
               {/* Page title */}
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 capitalize">
-                  {location.pathname.startsWith('/companies/') && location.pathname.split('/')[2] && /^[0-9a-fA-F]{24}$/.test(location.pathname.split('/')[2])
-                    ? 'Company Details' 
-                    : location.pathname.startsWith('/companies/') && location.pathname.includes('/edit')
-                    ? 'Edit Company'
-                    : location.pathname === '/companies'
-                    ? 'Companies'
-                    : location.pathname.split('/').pop().replace(/-/g, ' ') || 'Dashboard'}
-                </h1>
-                <p className="text-sm text-gray-500">Manage your outreach campaigns</p>
+                {location.pathname !== '/dashboard' && location.pathname !== '/companies' && location.pathname !== '/add-company' && location.pathname !== '/compose-email' && location.pathname !== '/email-tracker' && location.pathname !== '/shortlist' && location.pathname !== '/analytics' && location.pathname !== '/manage-users' && location.pathname !== '/profile' && !location.pathname.startsWith('/companies/') && (
+                  <h1 className="text-2xl font-bold text-gray-900 capitalize">
+                    {location.pathname.split('/').pop().replace(/-/g, ' ') || 'Dashboard'}
+                  </h1>
+                )}
               </div>
             </div>
 
