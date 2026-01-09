@@ -5,7 +5,7 @@ import { useCompanyContext } from '../hooks/useCompanyContext';
 const EditCompanyPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { companies, updateCompanyAPI, fetchCompanyById } = useCompanyContext();
+  const { companies, updateCompanyAPI, getCompanyById } = useCompanyContext();
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
@@ -27,7 +27,7 @@ const EditCompanyPage = () => {
       try {
         if (!companyToEdit) {
           // If company not in context, fetch it directly
-          const fetchedCompany = await fetchCompanyById(id);
+          const fetchedCompany = await getCompanyById(id);
           setFormData({
             name: fetchedCompany.name || '',
             email: fetchedCompany.email || '',
@@ -60,7 +60,7 @@ const EditCompanyPage = () => {
     if (id) {
       loadCompany();
     }
-  }, [id, companyToEdit, fetchCompanyById, navigate, companies]);
+  }, [id, companyToEdit, getCompanyById, navigate, companies]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

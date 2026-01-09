@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCompanyContext } from '../hooks/useCompanyContext';
 import { 
@@ -22,33 +22,27 @@ import {
 const CompanyDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { companies, loading, deleteCompany } = useCompanyContext();
+  const { getCompanyById, deleteCompanyAPI } = useCompanyContext();
+  const [company, setCompany] = useState(null);
+  const [loading, setLoading] = useState(true);
   
-  const company = useMemo(() => {
-    if (companies) {
-      // Try to find company by comparing both string and integer IDs
-      return companies.find(c => {
-        const companyId = c.id;
-        const urlId = id;
-        
-        // Compare as strings first (handles both string IDs and object IDs)
-        if (String(companyId) === String(urlId)) {
-          return true;
-        }
-        
-        // Compare as integers (for numeric IDs)
-        const parsedCompanyId = parseInt(companyId);
-        const parsedUrlId = parseInt(urlId);
-        
-        if (!isNaN(parsedCompanyId) && !isNaN(parsedUrlId) && parsedCompanyId === parsedUrlId) {
-          return true;
-        }
-        
-        return false;
-      });
-    }
-    return null;
-  }, [companies, id]);
+  useEffect(() => {
+    const fetchCompany = async () => {
+      try {
+        setLoading(true);
+        const companyData = await getCompanyById(id);
+        setCompany(companyData);
+      } catch (error) {
+        console.error('Error fetching company:', error);
+        // Optionally navigate to a not found page
+        // navigate('/not-found');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCompany();
+  }, [id, getCompanyById]);
   
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -82,7 +76,7 @@ const CompanyDetailPage = () => {
 
   const handleDelete = async () => {
     try {
-      await deleteCompany(parseInt(id));
+      await deleteCompanyAPI(id);
       setShowDeleteModal(false);
       navigate('/companies');
     } catch (error) {

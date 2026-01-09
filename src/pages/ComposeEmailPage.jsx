@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompanyContext } from '../hooks/useCompanyContext';
+import { useAuth } from '../hooks/useAuth';
 
 import { 
   EnvelopeIcon, 
@@ -44,11 +45,22 @@ const ComposeEmailPage = () => {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const fileInputRef = useRef(null);
 
+  const { user } = useAuth();
+  
   // Filter companies based on search term and filter
   const filteredCompanies = useMemo(() => {
     if (!companies) return [];
     
-    return companies.filter(company => {
+    // Filter companies for employees to only show companies they created
+    const filteredCompanies = user?.role === 'employee' 
+      ? companies.filter(company => 
+          company.creatorId === user.id || 
+          company.createdBy === user.id || 
+          company.creator === user.id
+        )
+      : companies;
+    
+    return filteredCompanies.filter(company => {
       const matchesSearch = company.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            company.email.toLowerCase().includes(searchTerm.toLowerCase());
       
@@ -58,7 +70,7 @@ const ComposeEmailPage = () => {
       
       return matchesSearch;
     });
-  }, [companies, searchTerm, filter]);
+  }, [companies, searchTerm, filter, user]);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);

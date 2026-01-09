@@ -218,6 +218,8 @@ export const CompanyProvider = ({ children }) => {
     
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
+      // For employees, we might want to call a different endpoint or filter results
+      // For now, we'll call the same API and rely on the backend to handle access control
       const response = await companyAPI.getCompanies();
       
       // Handle different possible response structures
@@ -233,6 +235,11 @@ export const CompanyProvider = ({ children }) => {
         // Use empty array if response format is unexpected
         console.warn('Unexpected API response format');
         companiesData = [];
+      }
+      
+      // For employee users, filter to only show their companies
+      if (user.role === 'employee') {
+        companiesData = companiesData.filter(company => company.creatorId === user.id || company.createdBy === user.id || company.creator === user.id);
       }
       
       // Normalize the companies data before storing
@@ -255,7 +262,15 @@ export const CompanyProvider = ({ children }) => {
     
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const response = await companyAPI.addCompany(companyData);
+      // Automatically set the creator when adding a company
+      const companyDataWithCreator = {
+        ...companyData,
+        creatorId: user.id,
+        createdBy: user.id,
+        creator: user.id
+      };
+      
+      const response = await companyAPI.addCompany(companyDataWithCreator);
       
       // Refetch companies to update the list
       const updatedResponse = await companyAPI.getCompanies();
@@ -273,6 +288,11 @@ export const CompanyProvider = ({ children }) => {
         // Use empty array if response format is unexpected
         console.warn('Unexpected API response format for getCompanies');
         companiesData = [];
+      }
+      
+      // For employee users, filter to only show their companies
+      if (user.role === 'employee') {
+        companiesData = companiesData.filter(company => company.creatorId === user.id || company.createdBy === user.id || company.creator === user.id);
       }
       
       // Normalize the companies data before storing
@@ -466,6 +486,36 @@ export const CompanyProvider = ({ children }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const response = await emailAPI.sendSingleEmail(emailData);
+      
+      // After sending an email, update the company status to 'Contacted'
+      if (emailData.companyId) {
+        try {
+          // Get the current company to update its status
+          const companyResponse = await companyAPI.getCompanyById(emailData.companyId);
+          
+          // Update the company status to 'Contacted'
+          const updatedCompanyData = {
+            ...companyResponse.data,
+            status: 'Contacted'
+          };
+          
+          // Update the company via API
+          await companyAPI.updateCompany(emailData.companyId, updatedCompanyData);
+          
+          // Update local state
+          dispatch({ 
+            type: 'UPDATE_COMPANY', 
+            payload: normalizeCompany({
+              ...companyResponse.data,
+              status: 'Contacted'
+            }) 
+          });
+        } catch (updateError) {
+          console.error('Error updating company status after email:', updateError);
+          // Still return the email response even if status update fails
+        }
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Error sending single email:', error);

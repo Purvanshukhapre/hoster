@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useCompanyContext } from '../hooks/useCompanyContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { 
   ArrowLeftIcon, 
   ChatBubbleLeftRightIcon, 
@@ -20,7 +21,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 const EmailTrackerPage = () => {
-  const { getMails, getMailById, loading } = useCompanyContext();
+  const { user } = useAuth();
+  const { getMails, getMailById, loading, companies } = useCompanyContext();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -47,13 +49,37 @@ const EmailTrackerPage = () => {
         
         // Handle the API response format from backend
         // The API returns { success: true, mails: [...], totalPages, currentPage, totalMails }
+        let allEmails = [];
         if (emailsData && emailsData.mails !== undefined) {
-          setEmails(emailsData.mails);
+          allEmails = emailsData.mails;
         } else if (Array.isArray(emailsData)) {
           // Fallback to array if direct array is returned
-          setEmails(emailsData);
+          allEmails = emailsData;
+        }
+        
+        // Filter emails for employees to only show emails related to companies they created
+        if (user?.role === 'employee' && companies) {
+          const userCompanyIds = companies
+            .filter(company => 
+              company.creatorId === user.id || 
+              company.createdBy === user.id || 
+              company.creator === user.id
+            )
+            .map(company => company.id || company._id);
+            
+          const filteredEmails = allEmails.filter(email => {
+            if (!email.companyIds || !Array.isArray(email.companyIds)) return false;
+            
+            // Check if any of the company IDs in the email match the user's companies
+            return email.companyIds.some(company => 
+              userCompanyIds.includes(company._id || company.id)
+            );
+          });
+          
+          setEmails(filteredEmails);
         } else {
-          setEmails([]);
+          // For admins, show all emails
+          setEmails(allEmails);
         }
       } catch (error) {
         console.error('Error fetching emails:', error);
@@ -64,7 +90,7 @@ const EmailTrackerPage = () => {
     };
 
     fetchEmails();
-  }, [getMails]);
+  }, [getMails, user, companies]);
 
   // Process emails for display
   const allEmails = useMemo(() => {

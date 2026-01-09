@@ -11,8 +11,10 @@ import {
   FunnelIcon
 } from '@heroicons/react/24/outline';
 import api from '../services/api';
+import { useCompanyContext } from '../hooks/useCompanyContext';
 
 const ManageUsersPage = () => {
+  const { companies } = useCompanyContext();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -209,6 +211,18 @@ const ManageUsersPage = () => {
     }
   };
 
+  // Calculate company counts for all users
+  const userCompanyCounts = {};
+  if (users && companies) {
+    users.forEach(user => {
+      userCompanyCounts[user._id] = companies.filter(company => 
+        company.creatorId === user._id || 
+        company.createdBy === user._id || 
+        company.creator === user._id
+      ).length;
+    });
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -306,6 +320,9 @@ const ManageUsersPage = () => {
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Companies Added
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -314,7 +331,15 @@ const ManageUsersPage = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
+              {filteredUsers.map((user) => {
+                // Calculate company count for this user
+                const companyCount = companies?.filter(company => 
+                  company.creatorId === user._id || 
+                  company.createdBy === user._id || 
+                  company.creator === user._id
+                ).length || 0;
+                
+                return (
                 <tr key={user._id} className="hover:bg-gray-50 transition-colors duration-150">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -332,6 +357,11 @@ const ManageUsersPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
                       {user.role}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {companyCount}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -355,7 +385,7 @@ const ManageUsersPage = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

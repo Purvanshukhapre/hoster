@@ -100,6 +100,62 @@ const QuickActions = ({ user }) => (
   </div>
 );
 
+// Add new component for employee company breakdown
+const EmployeeCompanyBreakdown = ({ companies, user }) => {
+  if (user?.role !== 'admin') return null;
+  
+  // Calculate company count per employee
+  const employeeCompanyCounts = {};
+  const employeeDetails = {};
+  
+  companies?.forEach(company => {
+    const creatorId = company.creatorId || company.createdBy || company.creator;
+    if (creatorId) {
+      // Store employee details to use proper names if available
+      if (!employeeDetails[creatorId]) {
+        employeeDetails[creatorId] = {
+          name: company.creatorName || company.createdByName || company.creatorInfo?.name || `Employee ${creatorId.substring(0, 8)}...`,
+          email: company.creatorEmail || company.createdByEmail || company.creatorInfo?.email || ''
+        };
+      }
+      
+      if (employeeCompanyCounts[creatorId]) {
+        employeeCompanyCounts[creatorId]++;
+      } else {
+        employeeCompanyCounts[creatorId] = 1;
+      }
+    }
+  });
+  
+  // Convert to array and sort by count (descending)
+  const sortedEmployeeCounts = Object.entries(employeeCompanyCounts)
+    .map(([employeeId, count]) => ({ 
+      employeeId, 
+      count,
+      name: employeeDetails[employeeId]?.name || `Employee ${employeeId.substring(0, 8)}...`
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5); // Show top 5 employees
+  
+  if (sortedEmployeeCounts.length === 0) return null;
+  
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Employee Company Counts</h3>
+      <div className="space-y-3">
+        {sortedEmployeeCounts.map(({ employeeId, name, count }) => (
+          <div key={employeeId} className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">{name}</span>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {count} {count === 1 ? 'company' : 'companies'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const DashboardPage = () => {
   const { companies, loading } = useCompanyContext();
   const { user } = useAuth();
@@ -108,10 +164,15 @@ const DashboardPage = () => {
   const stats = useMemo(() => {
     if (!companies) return { totalCompanies: 0, contacted: 0, responded: 0, shortlisted: 0 };
     
-    const total = companies.length;
-    const contacted = companies.filter(c => c.status !== 'New').length;
-    const responded = companies.filter(c => c.status === 'Responded' || c.status === 'Shortlisted').length;
-    const shortlisted = companies.filter(c => c.status === 'Shortlisted').length;
+    // Filter companies based on user role
+    const filteredCompanies = user?.role === 'employee' 
+      ? companies.filter(c => c.creatorId === user.id || c.createdBy === user.id || c.creator === user.id)
+      : companies;
+    
+    const total = filteredCompanies.length;
+    const contacted = filteredCompanies.filter(c => c.status !== 'New').length;
+    const responded = filteredCompanies.filter(c => c.status === 'Responded' || c.status === 'Shortlisted').length;
+    const shortlisted = filteredCompanies.filter(c => c.status === 'Shortlisted').length;
 
     return {
       totalCompanies: total,
@@ -119,7 +180,7 @@ const DashboardPage = () => {
       responded,
       shortlisted
     };
-  }, [companies]);
+  }, [companies, user]);
 
   if (loading) {
     return (
@@ -187,7 +248,13 @@ const DashboardPage = () => {
         <RecentActivity />
       </div>
 
-      <QuickActions user={user} />
+      {/* Employee Company Breakdown for Admins */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <EmployeeCompanyBreakdown companies={companies} user={user} />
+        </div>
+        <QuickActions user={user} />
+      </div>
     </div>
   );
 };
