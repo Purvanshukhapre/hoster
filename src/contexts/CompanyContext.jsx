@@ -10,20 +10,25 @@ const normalizeCompany = (company) => {
   return {
     ...company,
     // Map API field 'companyName' to expected field 'name'
-    name: company.companyName || company.name || 'Unnamed Company',
+    name: company.companyName || company.name || company.title || company.company_name || 'Unnamed Company',
     // Map API field 'websiteUrl' to expected field 'website'
-    website: company.websiteUrl || company.website || '#',
+    website: company.websiteUrl || company.website || company.url || '#',
     // Map API field 'companyEmail' to expected field 'email'
-    email: company.companyEmail || company.email || 'N/A',
+    email: company.companyEmail || company.email || company.company_email || 'N/A',
     // Use the API ID field (_id) if id is not present
     id: company.id || company._id || Date.now() + Math.random(), // Generate fallback ID if none exists
+    // Extract creator information
+    creatorId: company.createdBy?._id || company.creatorId || company.createdBy,
+    creatorName: company.createdBy?.name || company.creatorName,
+    creatorEmail: company.createdBy?.email || company.creatorEmail,
     // Ensure other expected fields exist
     responses: company.responses || [],
     requirements: company.requirements || null,
     isShortlisted: company.isShortlisted || false,
-    dateAdded: company.dateAdded || company.createdAt || new Date().toISOString().split('T')[0],
-    industry: company.industry || 'N/A',
-    status: company.status || 'Unknown',
+    contactPerson: company.contactPerson || company.contact_person || company.person || 'N/A',
+    dateAdded: company.dateAdded || company.createdAt || company.created_at || new Date().toISOString().split('T')[0],
+    industry: company.industry || company.company_industry || 'N/A',
+    status: company.status || company.state || company.company_status || 'Unknown',
     description: company.description || 'No description'
   };
 };
@@ -236,12 +241,17 @@ export const CompanyProvider = ({ children }) => {
         console.warn('Unexpected API response format');
         companiesData = [];
       }
-      
+          
       // For employee users, filter to only show their companies
       if (user.role === 'employee') {
-        companiesData = companiesData.filter(company => company.creatorId === user.id || company.createdBy === user.id || company.creator === user.id);
+        companiesData = companiesData.filter(company => 
+          (typeof company.createdBy === 'object' ? company.createdBy._id === user.id : false) ||
+          company.createdBy === user.id ||
+          company.creatorId === user.id || 
+          company.creator === user.id
+        );
       }
-      
+          
       // Normalize the companies data before storing
       const normalizedCompanies = normalizeCompanies(companiesData);
       dispatch({ type: 'SET_COMPANIES', payload: normalizedCompanies });
@@ -289,12 +299,17 @@ export const CompanyProvider = ({ children }) => {
         console.warn('Unexpected API response format for getCompanies');
         companiesData = [];
       }
-      
+          
       // For employee users, filter to only show their companies
       if (user.role === 'employee') {
-        companiesData = companiesData.filter(company => company.creatorId === user.id || company.createdBy === user.id || company.creator === user.id);
+        companiesData = companiesData.filter(company => 
+          (typeof company.createdBy === 'object' ? company.createdBy._id === user.id : false) ||
+          company.createdBy === user.id ||
+          company.creatorId === user.id || 
+          company.creator === user.id
+        );
       }
-      
+          
       // Normalize the companies data before storing
       const normalizedCompanies = normalizeCompanies(companiesData);
       dispatch({ type: 'SET_COMPANIES', payload: normalizedCompanies });
@@ -465,8 +480,15 @@ export const CompanyProvider = ({ children }) => {
     try {
       const response = await companyAPI.getCompanyById(id);
       
+      // Handle the response structure - API returns { success: true, data: company }
+      let companyData = response.data;
+      
+      if (response.data && typeof response.data === 'object' && response.data.data !== undefined) {
+        companyData = response.data.data;
+      }
+      
       // Normalize the company data before returning
-      const normalizedCompany = normalizeCompany(response.data);
+      const normalizedCompany = normalizeCompany(companyData);
       return normalizedCompany;
     } catch (error) {
       console.error('Error fetching company by ID:', error);
@@ -493,9 +515,16 @@ export const CompanyProvider = ({ children }) => {
           // Get the current company to update its status
           const companyResponse = await companyAPI.getCompanyById(emailData.companyId);
           
+          // Handle the response structure - API returns { success: true, data: company }
+          let companyData = companyResponse.data;
+          
+          if (companyResponse.data && typeof companyResponse.data === 'object' && companyResponse.data.data !== undefined) {
+            companyData = companyResponse.data.data;
+          }
+          
           // Update the company status to 'Contacted'
           const updatedCompanyData = {
-            ...companyResponse.data,
+            ...companyData,
             status: 'Contacted'
           };
           
@@ -506,7 +535,7 @@ export const CompanyProvider = ({ children }) => {
           dispatch({ 
             type: 'UPDATE_COMPANY', 
             payload: normalizeCompany({
-              ...companyResponse.data,
+              ...companyData,
               status: 'Contacted'
             }) 
           });

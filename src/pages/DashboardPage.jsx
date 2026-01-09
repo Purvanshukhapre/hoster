@@ -114,7 +114,7 @@ const EmployeeCompanyBreakdown = ({ companies, user }) => {
       // Store employee details to use proper names if available
       if (!employeeDetails[creatorId]) {
         employeeDetails[creatorId] = {
-          name: company.creatorName || company.createdByName || company.creatorInfo?.name || `Employee ${creatorId.substring(0, 8)}...`,
+          name: company.creatorName || company.createdByName || company.creatorInfo?.name || `Employee ${(creatorId || '').toString().substring(0, 8)}...`,
           email: company.creatorEmail || company.createdByEmail || company.creatorInfo?.email || ''
         };
       }
@@ -132,7 +132,7 @@ const EmployeeCompanyBreakdown = ({ companies, user }) => {
     .map(([employeeId, count]) => ({ 
       employeeId, 
       count,
-      name: employeeDetails[employeeId]?.name || `Employee ${employeeId.substring(0, 8)}...`
+      name: employeeDetails[employeeId]?.name || `Employee ${(employeeId || '').toString().substring(0, 8)}...`
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 5); // Show top 5 employees
