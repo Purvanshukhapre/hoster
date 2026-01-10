@@ -35,19 +35,6 @@ const CompaniesPage = () => {
   const [filterStatus, setFilterStatus] = useState('All');
   const [sortField, setSortField] = useState('name');
 
-  const { updateCompanyAPI } = useCompanyContext();
-  
-  const handleToggleShortlist = async (company) => {
-    try {
-      // Toggle the status between Shortlisted and previous status
-      const newStatus = company.status === 'Shortlisted' ? 'Responded' : 'Shortlisted';
-      
-      // Update the company status
-      await updateCompanyAPI(company.id, { ...company, status: newStatus });
-    } catch (error) {
-      console.error('Error toggling shortlist:', error);
-    }
-  };
   const [sortDirection, setSortDirection] = useState('asc');
   const navigate = useNavigate();
 
@@ -276,6 +263,7 @@ const CompaniesPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Contact Info
                 </th>
+
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('status')}
@@ -288,6 +276,7 @@ const CompaniesPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
+
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -295,48 +284,41 @@ const CompaniesPage = () => {
                 <tr key={company.id} className="hover:bg-gray-50 transition-colors duration-150">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                        <BuildingOfficeIcon className="h-6 w-6 text-white" />
+                      <div className="flex-shrink-0 h-8 w-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <BuildingOfficeIcon className="h-5 w-5 text-white" />
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{company.name}</div>
-                        <div className="text-sm text-gray-500">{company.website}</div>
+                      <div className="ml-2">
+                        <div className="text-sm font-medium text-gray-900 truncate max-w-xs">{company.name}</div>
+                        <div className="text-xs text-gray-500 truncate max-w-xs">{company.website}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{company.contactPerson}</div>
-                    <div className="text-sm text-gray-500">{company.position}</div>
+                    <div className="text-sm font-medium text-gray-900 truncate max-w-xs">{company.contactPerson}</div>
+                    <div className="text-xs text-gray-500 truncate max-w-xs">{company.position}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col space-y-1">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <PhoneIcon className="h-4 w-4 mr-2 text-gray-400" />
+                      <div className="flex items-center text-xs text-gray-600">
+                        <PhoneIcon className="h-3 w-3 mr-1 text-gray-400" />
                         {company.phone}
                       </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <EnvelopeIcon className="h-4 w-4 mr-2 text-gray-400" />
+                      <div className="flex items-center text-xs text-gray-600">
+                        <EnvelopeIcon className="h-3 w-3 mr-1 text-gray-400" />
                         {company.email}
                       </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPinIcon className="h-4 w-4 mr-2 text-gray-400" />
+                      <div className="flex items-center text-xs text-gray-600">
+                        <MapPinIcon className="h-3 w-3 mr-1 text-gray-400" />
                         {company.location}
                       </div>
                     </div>
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(company.status)}`}>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(company.status)}`}>
                       {getStatusIcon(company.status)}
                       <span className="ml-1">{company.status}</span>
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleToggleShortlist(company)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(company.status === 'Shortlisted' ? 'Shortlisted' : 'New')}`}
-                    >
-                      {company.status === 'Shortlisted' ? 'Unshortlist' : 'Shortlist'}
-                    </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button

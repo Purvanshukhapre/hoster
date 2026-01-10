@@ -23,7 +23,12 @@ const AddCompanyPage = () => {
     name: '',
     email: '',
     website: '',
-    status: 'New'
+    status: 'New',
+    personName: '',
+    phoneNumber: '',
+    alternatePhoneNumber: '',
+    gstNumber: '',
+    panNumber: ''
   });
   const [attachments, setAttachments] = useState([]);
   const [errors, setErrors] = useState({});
@@ -88,9 +93,9 @@ const AddCompanyPage = () => {
     const newErrors = {};
     
     if (!formData.name.trim()) newErrors.name = 'Company name is required';
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (!formData.website.trim()) newErrors.website = 'Website is required';
+    // Validate email if provided
+    if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
     }
     // Validate attachments if present
@@ -134,13 +139,18 @@ const AddCompanyPage = () => {
       // Prepare company data
       // Format according to backend expectations
       const companyData = {
-        name: formData.name || '',
-        contactPerson: 'N/A', // Backend requires this field
-        email: formData.email || '',
-        website: formData.website || '',
+        companyName: formData.name || '',
+        companyEmail: formData.email || '',
+        contactPerson: formData.personName || 'N/A', // Backend requires this field
+        websiteUrl: formData.website || '',
         status: formData.status || 'New',
         industry: 'Technology', // Required field by backend
         tags: '', // Optional field
+        personName: formData.personName || '',
+        phoneNumber: formData.phoneNumber || '',
+        alternatePhoneNumber: formData.alternatePhoneNumber || '',
+        gstNumber: formData.gstNumber || '',
+        panNumber: formData.panNumber || ''
       };
       
       // Only add uploadDocument if there are actual files to upload
@@ -271,6 +281,111 @@ const AddCompanyPage = () => {
                 <option value="Shortlisted">Shortlisted</option>
                 <option value="Rejected">Rejected</option>
               </select>
+            </div>
+
+            {/* Person Name */}
+            <div>
+              <label htmlFor="personName" className="block text-sm font-medium text-gray-700 mb-2">
+                Contact Person Name
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <UserIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  id="personName"
+                  name="personName"
+                  value={formData.personName}
+                  onChange={handleChange}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter contact person name"
+                />
+              </div>
+            </div>
+
+            {/* Phone Number */}
+            <div>
+              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                Primary Phone Number
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <PhoneIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="tel"
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter primary phone number"
+                />
+              </div>
+            </div>
+
+            {/* Alternate Phone Number */}
+            <div>
+              <label htmlFor="alternatePhoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                Alternate Phone Number
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <PhoneIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="tel"
+                  id="alternatePhoneNumber"
+                  name="alternatePhoneNumber"
+                  value={formData.alternatePhoneNumber}
+                  onChange={handleChange}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter alternate phone number"
+                />
+              </div>
+            </div>
+
+            {/* GST Number */}
+            <div>
+              <label htmlFor="gstNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                GST Number
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <BriefcaseIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  id="gstNumber"
+                  name="gstNumber"
+                  value={formData.gstNumber}
+                  onChange={handleChange}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter GST number"
+                />
+              </div>
+            </div>
+
+            {/* PAN Number */}
+            <div>
+              <label htmlFor="panNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                PAN Number
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <DocumentTextIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  id="panNumber"
+                  name="panNumber"
+                  value={formData.panNumber}
+                  onChange={handleChange}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter PAN number"
+                />
+              </div>
             </div>
           </div>
 

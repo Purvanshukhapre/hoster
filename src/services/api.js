@@ -104,7 +104,7 @@ export const companyAPI = {
   // Add a new company
   addCompany: (companyData) => {
     // Check if there are documents to handle as multipart form data
-    if (companyData.uploadDocument && Array.isArray(companyData.uploadDocument) && companyData.uploadDocument.length > 0) {
+    if (companyData.attachments && Array.isArray(companyData.attachments) && companyData.attachments.length > 0) {
       const formData = new FormData();
       
       // Add all fields to form data according to backend expectations
@@ -115,9 +115,15 @@ export const companyAPI = {
       formData.append('industry', companyData.industry || 'Technology');
       formData.append('tags', companyData.tags || '');
       formData.append('status', companyData.status || 'New');
+      // Add new fields
+      formData.append('personName', companyData.personName || '');
+      formData.append('phoneNumber', companyData.phoneNumber || '');
+      formData.append('alternatePhoneNumber', companyData.alternatePhoneNumber || '');
+      formData.append('gstNumber', companyData.gstNumber || '');
+      formData.append('panNumber', companyData.panNumber || '');
       
       // Add document uploads - append each file individually
-      companyData.uploadDocument.forEach((document) => {
+      companyData.attachments.forEach((document) => {
         if (document instanceof File) {
           formData.append('uploadDocument', document, document.name);
         }
@@ -131,13 +137,19 @@ export const companyAPI = {
     } else {
       // No documents, send as regular JSON
       const backendData = {
-        companyName: companyData.name || '',
-        companyEmail: companyData.email || '',
+        companyName: companyData.companyName || '',
+        companyEmail: companyData.companyEmail || '',
         contactPerson: companyData.contactPerson || 'N/A',
-        websiteUrl: companyData.website || '',
+        websiteUrl: companyData.websiteUrl || '',
         industry: companyData.industry || 'Technology',
         tags: companyData.tags || '',
         status: companyData.status || 'New',
+        // Add new fields
+        personName: companyData.personName || '',
+        phoneNumber: companyData.phoneNumber || '',
+        alternatePhoneNumber: companyData.alternatePhoneNumber || '',
+        gstNumber: companyData.gstNumber || '',
+        panNumber: companyData.panNumber || ''
       };
       
       // Remove undefined values to avoid issues with backend
@@ -154,7 +166,7 @@ export const companyAPI = {
   // Update a company
   updateCompany: (id, companyData) => {
     // Check if there are documents to handle as multipart form data
-    if (companyData.uploadDocument && Array.isArray(companyData.uploadDocument) && companyData.uploadDocument.length > 0) {
+    if (companyData.attachments && Array.isArray(companyData.attachments) && companyData.attachments.length > 0) {
       const formData = new FormData();
       
       // Add all fields to form data according to backend expectations
@@ -165,9 +177,15 @@ export const companyAPI = {
       formData.append('industry', companyData.industry || 'Technology');
       formData.append('tags', companyData.tags || '');
       formData.append('status', companyData.status || 'New');
+      // Add new fields
+      formData.append('personName', companyData.personName || '');
+      formData.append('phoneNumber', companyData.phoneNumber || '');
+      formData.append('alternatePhoneNumber', companyData.alternatePhoneNumber || '');
+      formData.append('gstNumber', companyData.gstNumber || '');
+      formData.append('panNumber', companyData.panNumber || '');
       
       // Add document uploads - append each file individually
-      companyData.uploadDocument.forEach((document) => {
+      companyData.attachments.forEach((document) => {
         if (document instanceof File) {
           formData.append('uploadDocument', document, document.name);
         }
@@ -188,6 +206,12 @@ export const companyAPI = {
         industry: companyData.industry || 'Technology',
         tags: companyData.tags || '',
         status: companyData.status || 'New',
+        // Add new fields
+        personName: companyData.personName || '',
+        phoneNumber: companyData.phoneNumber || '',
+        alternatePhoneNumber: companyData.alternatePhoneNumber || '',
+        gstNumber: companyData.gstNumber || '',
+        panNumber: companyData.panNumber || ''
       };
       
       // Remove undefined values to avoid issues with backend

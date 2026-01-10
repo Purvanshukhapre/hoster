@@ -16,7 +16,8 @@ import {
   TrashIcon,
   UserIcon,
   ChartBarIcon,
-  XCircleIcon
+  XCircleIcon,
+  BriefcaseIcon
 } from '@heroicons/react/24/outline';
 
 const CompanyDetailPage = () => {
@@ -170,12 +171,28 @@ const CompanyDetailPage = () => {
                     </div>
                   </div>
                   <div className="flex items-center">
+                    <UserIcon className="h-5 w-5 text-gray-400 mr-3" />
+                    <p className="text-sm text-gray-900">{company.personName}</p>
+                  </div>
+                  <div className="flex items-center">
                     <PhoneIcon className="h-5 w-5 text-gray-400 mr-3" />
-                    <p className="text-sm text-gray-900">{company.phone}</p>
+                    <p className="text-sm text-gray-900">{company.phoneNumber}</p>
+                  </div>
+                  <div className="flex items-center">
+                    <PhoneIcon className="h-5 w-5 text-gray-400 mr-3" />
+                    <p className="text-sm text-gray-900">{company.alternatePhoneNumber}</p>
                   </div>
                   <div className="flex items-center">
                     <EnvelopeIcon className="h-5 w-5 text-gray-400 mr-3" />
                     <p className="text-sm text-gray-900">{company.email}</p>
+                  </div>
+                  <div className="flex items-center">
+                    <BriefcaseIcon className="h-5 w-5 text-gray-400 mr-3" />
+                    <p className="text-sm text-gray-900">GST: {company.gstNumber}</p>
+                  </div>
+                  <div className="flex items-center">
+                    <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-3" />
+                    <p className="text-sm text-gray-900">PAN: {company.panNumber}</p>
                   </div>
                 </div>
               </div>

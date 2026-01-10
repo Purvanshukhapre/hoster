@@ -14,7 +14,12 @@ const EditCompanyPage = () => {
     contactPerson: '',
     status: 'New',
     industry: 'Technology',
-    tags: ''
+    tags: '',
+    personName: '',
+    phoneNumber: '',
+    alternatePhoneNumber: '',
+    gstNumber: '',
+    panNumber: ''
   });
   const [errors, setErrors] = useState({});
   const [attachments, setAttachments] = useState([]);
@@ -35,7 +40,12 @@ const EditCompanyPage = () => {
             contactPerson: fetchedCompany.contactPerson || '',
             status: fetchedCompany.status || 'New',
             industry: fetchedCompany.industry || 'Technology',
-            tags: fetchedCompany.tags || ''
+            tags: fetchedCompany.tags || '',
+            personName: fetchedCompany.personName || '',
+            phoneNumber: fetchedCompany.phoneNumber || '',
+            alternatePhoneNumber: fetchedCompany.alternatePhoneNumber || '',
+            gstNumber: fetchedCompany.gstNumber || '',
+            panNumber: fetchedCompany.panNumber || ''
           });
         } else {
           setFormData({
@@ -45,7 +55,12 @@ const EditCompanyPage = () => {
             contactPerson: companyToEdit.contactPerson || '',
             status: companyToEdit.status || 'New',
             industry: companyToEdit.industry || 'Technology',
-            tags: companyToEdit.tags || ''
+            tags: companyToEdit.tags || '',
+            personName: companyToEdit.personName || '',
+            phoneNumber: companyToEdit.phoneNumber || '',
+            alternatePhoneNumber: companyToEdit.alternatePhoneNumber || '',
+            gstNumber: companyToEdit.gstNumber || '',
+            panNumber: companyToEdit.panNumber || ''
           });
         }
       } catch (error) {
@@ -100,9 +115,9 @@ const EditCompanyPage = () => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Company name is required';
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (!formData.website.trim()) newErrors.website = 'Website is required';
+    // Validate email if provided
+    if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
     }
     
@@ -148,12 +163,17 @@ const EditCompanyPage = () => {
       // Format according to backend expectations
       const companyData = {
         companyName: formData.name || '',
-        contactPerson: formData.contactPerson || 'N/A', // Backend requires this field
         companyEmail: formData.email || '',
+        contactPerson: formData.contactPerson || 'N/A', // Backend requires this field
         websiteUrl: formData.website || '',
         status: formData.status || 'New',
         industry: formData.industry || 'Technology', // Required field by backend
         tags: formData.tags || '', // Optional field
+        personName: formData.personName || '',
+        phoneNumber: formData.phoneNumber || '',
+        alternatePhoneNumber: formData.alternatePhoneNumber || '',
+        gstNumber: formData.gstNumber || '',
+        panNumber: formData.panNumber || ''
       };
       
       // Only add uploadDocument if there are actual files to upload
@@ -298,19 +318,81 @@ const EditCompanyPage = () => {
           </div>
         </div>
 
-        <div>
-          <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
-            Tags
-          </label>
-          <input
-            type="text"
-            id="tags"
-            name="tags"
-            value={formData.tags}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter tags separated by commas"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label htmlFor="personName" className="block text-sm font-medium text-gray-700 mb-1">
+              Contact Person Name
+            </label>
+            <input
+              type="text"
+              id="personName"
+              name="personName"
+              value={formData.personName}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter contact person name"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+              Primary Phone Number
+            </label>
+            <input
+              type="tel"
+              id="phoneNumber"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter primary phone number"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="alternatePhoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+              Alternate Phone Number
+            </label>
+            <input
+              type="tel"
+              id="alternatePhoneNumber"
+              name="alternatePhoneNumber"
+              value={formData.alternatePhoneNumber}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter alternate phone number"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="gstNumber" className="block text-sm font-medium text-gray-700 mb-1">
+              GST Number
+            </label>
+            <input
+              type="text"
+              id="gstNumber"
+              name="gstNumber"
+              value={formData.gstNumber}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter GST number"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="panNumber" className="block text-sm font-medium text-gray-700 mb-1">
+              PAN Number
+            </label>
+            <input
+              type="text"
+              id="panNumber"
+              name="panNumber"
+              value={formData.panNumber}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter PAN number"
+            />
+          </div>
         </div>
 
         <div>
