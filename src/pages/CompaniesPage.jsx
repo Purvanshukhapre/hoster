@@ -61,21 +61,33 @@ const CompaniesPage = () => {
 
     // Apply sorting - create a copy to avoid mutating the original array
     const sortedFiltered = [...filtered];
-    sortedFiltered.sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
+    
+    // Sort by createdAt date (newest first) by default, but respect user's sort selection
+    if (sortField === 'name' && sortDirection === 'asc') {
+      // Sort by createdAt (newest first) when in default state
+      sortedFiltered.sort((a, b) => {
+        const aDate = new Date(a.createdAt || a.dateAdded || a._id?.substring(0, 8) || 0);
+        const bDate = new Date(b.createdAt || b.dateAdded || b._id?.substring(0, 8) || 0);
+        return bDate - aDate; // Descending order (newest first)
+      });
+    } else {
+      // Use the normal sort logic
+      sortedFiltered.sort((a, b) => {
+        let aValue = a[sortField];
+        let bValue = b[sortField];
 
-      if (typeof aValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
+        if (typeof aValue === 'string') {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
 
-      if (sortDirection === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
+        if (sortDirection === 'asc') {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
+    }
 
     return sortedFiltered;
   }, [companies, searchTerm, filterStatus, sortField, sortDirection]);

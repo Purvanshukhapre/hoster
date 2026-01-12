@@ -208,7 +208,7 @@ const AddCompanyPage = () => {
                   value={formData.name}
                   onChange={handleChange}
                   className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.name ? 'border-red-300' : 'border-gray-300'
+                    errors.name ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="Enter company name"
                 />
@@ -257,10 +257,13 @@ const AddCompanyPage = () => {
                   name="website"
                   value={formData.website}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.website ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="https://example.com"
                 />
               </div>
+              {errors.website && <p className="mt-1 text-sm text-red-600">{errors.website}</p>}
             </div>
 
             {/* Status */}
