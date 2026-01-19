@@ -72,12 +72,18 @@ const MainLayout = ({ children }) => {
           { name: 'Manage Users', href: '/manage-users', icon: UserGroupIcon },
         ] 
       : []),
-    { name: 'Companies', href: '/companies', icon: BuildingOfficeIcon },
-    { name: 'Add Company', href: '/add-company', icon: PlusCircleIcon },
-    { name: 'Compose Email', href: '/compose-email', icon: EnvelopeIcon },
-    { name: 'Email Tracker', href: '/email-tracker', icon: ClipboardDocumentListIcon },
-    { name: 'Shortlist', href: '/shortlist', icon: UserGroupIcon },
-    { name: 'Profile', href: '/profile', icon: UserCircleIcon },
+    ...(user?.role === 'developer'
+      ? [
+          { name: 'Companies', href: '/companies', icon: BuildingOfficeIcon },
+        ]
+      : [
+          { name: 'Companies', href: '/companies', icon: BuildingOfficeIcon },
+          { name: 'Add Company', href: '/add-company', icon: PlusCircleIcon },
+          { name: 'Compose Email', href: '/compose-email', icon: EnvelopeIcon },
+          { name: 'Email Tracker', href: '/email-tracker', icon: ClipboardDocumentListIcon },
+          { name: 'Shortlist', href: '/shortlist', icon: UserGroupIcon },
+          { name: 'Profile', href: '/profile', icon: UserCircleIcon },
+        ]),
   ];
 
   const bottomNavigation = [
@@ -88,6 +94,7 @@ const MainLayout = ({ children }) => {
     switch(role) {
       case 'admin': return 'bg-red-100 text-red-800';
       case 'employee': return 'bg-blue-100 text-blue-800';
+      case 'developer': return 'bg-purple-100 text-purple-800';
       case 'user': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }

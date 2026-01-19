@@ -108,10 +108,10 @@ export const companyAPI = {
       const formData = new FormData();
       
       // Add all fields to form data according to backend expectations
-      formData.append('companyName', companyData.name || '');
-      formData.append('companyEmail', companyData.email || '');
+      formData.append('companyName', companyData.companyName || '');
+      formData.append('companyEmail', companyData.companyEmail || '');
       formData.append('contactPerson', companyData.contactPerson || 'N/A');
-      formData.append('websiteUrl', companyData.website || '');
+      formData.append('websiteUrl', companyData.websiteUrl || '');
       formData.append('industry', companyData.industry || 'Technology');
       formData.append('tags', companyData.tags || '');
       formData.append('status', companyData.status || 'New');
@@ -182,7 +182,7 @@ export const companyAPI = {
       formData.append('phoneNumber', companyData.phoneNumber || '');
       formData.append('alternatePhoneNumber', companyData.alternatePhoneNumber || '');
       formData.append('gstNumber', companyData.gstNumber || '');
-      formData.append('panNumber', companyData.panNumber || '');
+      formData.append('panNumber', companyData.panNumber || '')
       
       // Add document uploads - append each file individually
       companyData.attachments.forEach((document) => {
@@ -239,6 +239,15 @@ export const companyAPI = {
   
   // Get company statistics
   getCompanyStats: () => api.get(`/companies/stats`),
+};
+
+// Developer API endpoints
+export const developerAPI = {
+  // Get all companies for developer
+  getCompanies: () => api.get('/companies'),
+  
+  // Get specific company for developer
+  getCompanyById: (id) => api.get(`/companies/${id}`),
 };
 
 // Email API endpoints

@@ -18,7 +18,7 @@ const LoginPage = () => {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [loginType, setLoginType] = useState('admin'); // 'admin' or 'employee'
+  const [loginType, setLoginType] = useState('admin'); // 'admin', 'employee', or 'developer'
   const navigate = useNavigate();
   const { login, employeeLogin } = useAuth();
 
@@ -65,9 +65,26 @@ const LoginPage = () => {
       if (loginType === 'admin') {
         await login(formData.email, formData.password);
       } else {
+        // Both employee and developer use the same login endpoint
         await employeeLogin(formData.email, formData.password);
       }
-      navigate('/dashboard');
+      // After login, navigate based on user role
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        if (userData.role === 'developer') {
+          navigate('/companies'); // Developers go directly to companies page
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        // Fallback navigation
+        if (loginType === 'developer') {
+          navigate('/companies');
+        } else {
+          navigate('/dashboard');
+        }
+      }
     } catch (error) {
       console.error('Login error:', error);
       setErrors({ submit: 'Invalid credentials. Please try again.' });
@@ -111,6 +128,17 @@ const LoginPage = () => {
               }`}
             >
               Employee
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginType('developer')}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors duration-200 ${
+                loginType === 'developer'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Developer
             </button>
           </div>
 

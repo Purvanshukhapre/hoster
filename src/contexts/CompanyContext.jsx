@@ -1,5 +1,5 @@
 import React, { createContext, useReducer, useEffect, useCallback } from 'react';
-import { companyAPI, emailAPI } from '../services/api';
+import { companyAPI, emailAPI, developerAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
 const CompanyContext = createContext();
@@ -228,9 +228,16 @@ export const CompanyProvider = ({ children }) => {
     
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      // For employees, we might want to call a different endpoint or filter results
-      // For now, we'll call the same API and rely on the backend to handle access control
-      const response = await companyAPI.getCompanies();
+      let response;
+      
+      // Different API endpoints based on user role
+      if (user.role === 'developer') {
+        // Developers use a different endpoint
+        response = await developerAPI.getCompanies();
+      } else {
+        // For employees and admins, use the standard endpoint
+        response = await companyAPI.getCompanies();
+      }
       
       // Handle different possible response structures
       let companiesData = response.data;
@@ -345,7 +352,16 @@ export const CompanyProvider = ({ children }) => {
       const response = await companyAPI.updateCompany(id, companyData);
       
       // Refetch companies to update the list
-      const updatedResponse = await companyAPI.getCompanies();
+      let updatedResponse;
+      
+      // Different API endpoints based on user role
+      if (user.role === 'developer') {
+        // Developers use a different endpoint
+        updatedResponse = await developerAPI.getCompanies();
+      } else {
+        // For employees and admins, use the standard endpoint
+        updatedResponse = await companyAPI.getCompanies();
+      }
       
       // Handle different possible response structures for getCompanies
       let companiesData = updatedResponse.data;
@@ -361,6 +377,19 @@ export const CompanyProvider = ({ children }) => {
         console.warn('Unexpected API response format for getCompanies');
         companiesData = [];
       }
+      
+      // For employee users, filter to only show their companies
+      if (user.role === 'employee') {
+        companiesData = companiesData.filter(company => 
+          (typeof company.createdBy === 'object' ? company.createdBy._id === user.id : false) ||
+          company.createdBy === user.id ||
+          company.creatorId === user.id || 
+          company.creator === user.id
+        );
+      }
+      
+      // Developers have their own access rules, which are handled by the backend
+      // We don't apply client-side filtering for developers as their access is controlled server-side
       
       // Normalize the companies data before storing
       const normalizedCompanies = normalizeCompanies(companiesData);
@@ -390,7 +419,50 @@ export const CompanyProvider = ({ children }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       await companyAPI.deleteCompany(id);
-      dispatch({ type: 'DELETE_COMPANY', payload: id });
+      
+      // Refetch companies to update the list
+      let updatedResponse;
+      
+      // Different API endpoints based on user role
+      if (user.role === 'developer') {
+        // Developers use a different endpoint
+        updatedResponse = await developerAPI.getCompanies();
+      } else {
+        // For employees and admins, use the standard endpoint
+        updatedResponse = await companyAPI.getCompanies();
+      }
+      
+      // Handle different possible response structures for getCompanies
+      let companiesData = updatedResponse.data;
+      
+      // If response.data is an object with a data property containing companies array, use that
+      if (updatedResponse.data && typeof updatedResponse.data === 'object' && updatedResponse.data.data !== undefined) {
+        companiesData = updatedResponse.data.data;
+      } else if (Array.isArray(updatedResponse.data)) {
+        // If response.data is already an array
+        companiesData = updatedResponse.data;
+      } else {
+        // Use empty array if response format is unexpected
+        console.warn('Unexpected API response format for getCompanies');
+        companiesData = [];
+      }
+      
+      // For employee users, filter to only show their companies
+      if (user.role === 'employee') {
+        companiesData = companiesData.filter(company => 
+          (typeof company.createdBy === 'object' ? company.createdBy._id === user.id : false) ||
+          company.createdBy === user.id ||
+          company.creatorId === user.id || 
+          company.creator === user.id
+        );
+      }
+      
+      // Developers have their own access rules, which are handled by the backend
+      // We don't apply client-side filtering for developers as their access is controlled server-side
+      
+      // Normalize the companies data before storing
+      const normalizedCompanies = normalizeCompanies(companiesData);
+      dispatch({ type: 'SET_COMPANIES', payload: normalizedCompanies });
     } catch (error) {
       console.error('Error deleting company:', error);
       throw error;
@@ -483,7 +555,16 @@ export const CompanyProvider = ({ children }) => {
     
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const response = await companyAPI.getCompanyById(id);
+      let response;
+      
+      // Different API endpoints based on user role
+      if (user.role === 'developer') {
+        // Developers use a different endpoint
+        response = await developerAPI.getCompanyById(id);
+      } else {
+        // For employees and admins, use the standard endpoint
+        response = await companyAPI.getCompanyById(id);
+      }
       
       // Handle the response structure - API returns { success: true, data: company }
       let companyData = response.data;

@@ -43,7 +43,7 @@ const CompanyDetailsPage = () => {
             ...response.data.data,
             id: response.data.data._id || response.data.data.id, // Keep ID for internal operations but don't display
             name: response.data.data.companyName || response.data.data.name || 'Unnamed Company',
-            website: response.data.data.websiteUrl || response.data.data.website || '#',
+            website: response.data.data.websiteUrl || response.data.data.website || '',
             email: response.data.data.companyEmail || response.data.data.email || 'N/A',
             responses: response.data.data.responses || [],
             requirements: response.data.data.requirements || null,
@@ -205,14 +205,18 @@ const CompanyDetailsPage = () => {
                     <div className="flex justify-between">
                       <dt className="text-sm text-gray-600">Website</dt>
                       <dd className="text-sm text-gray-900">
-                        <a 
-                          href={company.website} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          {company.website}
-                        </a>
+                        {company.website && company.website !== '#' ? (
+                          <a 
+                            href={company.website.startsWith('http') ? company.website : `https://${company.website}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 underline"
+                          >
+                            {company.website}
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">N/A</span>
+                        )}
                       </dd>
                     </div>
                     <div className="flex justify-between">
@@ -332,12 +336,6 @@ const CompanyDetailsPage = () => {
 
             {/* Action Buttons */}
             <div className="flex space-x-3">
-              <button
-                onClick={() => navigate('/compose-email')}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-              >
-                Send Email
-              </button>
               <button
                 onClick={() => navigate('/shortlisted')}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"

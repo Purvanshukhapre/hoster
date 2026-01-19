@@ -18,6 +18,7 @@ import CompanyDetailPage from './pages/CompanyDetailPage';
 import EditCompanyPage from './pages/EditCompanyPage';
 import ProfilePage from './pages/ProfilePage';
 import EmployeeDashboardPage from './pages/EmployeeDashboardPage';
+import CreateDeveloperPage from './pages/CreateDeveloperPage';
 
 const PrivateRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -39,6 +40,10 @@ const PrivateRoute = ({ children, allowedRoles }) => {
     if (user.role === 'employee' && allowedRoles.includes('admin')) {
       return <Navigate to="/employee-dashboard" replace />;
     }
+    // Redirect developers to their companies page if they try to access admin-only pages
+    if (user.role === 'developer' && allowedRoles.includes('admin')) {
+      return <Navigate to="/companies" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -51,14 +56,14 @@ const AppContent = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard" element={<PrivateRoute allowedRoles={['admin', 'employee']}><MainLayout><DashboardPage /></MainLayout></PrivateRoute>} />
-      <Route path="/employee-dashboard" element={<PrivateRoute allowedRoles={['employee']}><MainLayout><EmployeeDashboardPage /></MainLayout></PrivateRoute>} />
-      <Route path="/companies" element={<PrivateRoute allowedRoles={['admin', 'employee']}><MainLayout><CompaniesPage /></MainLayout></PrivateRoute>} />
+      <Route path="/employee-dashboard" element={<PrivateRoute allowedRoles={['employee', 'developer']}><MainLayout><EmployeeDashboardPage /></MainLayout></PrivateRoute>} />
+      <Route path="/companies" element={<PrivateRoute allowedRoles={['admin', 'employee', 'developer']}><MainLayout><CompaniesPage /></MainLayout></PrivateRoute>} />
       <Route path="/add-company" element={<PrivateRoute allowedRoles={['admin', 'employee']}><MainLayout><AddCompanyPage /></MainLayout></PrivateRoute>} />
       <Route path="/compose-email" element={<PrivateRoute allowedRoles={['admin', 'employee']}><MainLayout><ComposeEmailPage /></MainLayout></PrivateRoute>} />
       <Route path="/email-tracker" element={<PrivateRoute allowedRoles={['admin', 'employee']}><MainLayout><EmailTrackerPage /></MainLayout></PrivateRoute>} />
       <Route path="/shortlist" element={<PrivateRoute allowedRoles={['admin', 'employee']}><MainLayout><ShortlistPage /></MainLayout></PrivateRoute>} />
       <Route path="/analytics" element={<PrivateRoute allowedRoles={['admin', 'employee']}><MainLayout><AnalyticsPage /></MainLayout></PrivateRoute>} />
-      <Route path="/profile" element={<PrivateRoute allowedRoles={['admin', 'employee']}><MainLayout><ProfilePage /></MainLayout></PrivateRoute>} />
+      <Route path="/profile" element={<PrivateRoute allowedRoles={['admin', 'employee', 'developer']}><MainLayout><ProfilePage /></MainLayout></PrivateRoute>} />
       
       {/* Admin-only routes */}
       <Route
@@ -70,9 +75,17 @@ const AppContent = () => {
         }
       />
       <Route
+        path="/create-developer"
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <MainLayout><CreateDeveloperPage /></MainLayout>
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/companies/:id"
         element={
-          <PrivateRoute allowedRoles={['admin', 'employee']}>
+          <PrivateRoute allowedRoles={['admin', 'employee', 'developer']}>
             <MainLayout><CompanyDetailPage /></MainLayout>
           </PrivateRoute>
         }

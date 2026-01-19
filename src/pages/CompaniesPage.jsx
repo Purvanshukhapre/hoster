@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompanyContext } from '../hooks/useCompanyContext';
+import { useAuth } from '../hooks/useAuth';
 import { 
   BuildingOfficeIcon, 
   PhoneIcon, 
@@ -31,6 +32,7 @@ const SortIndicator = ({ sortField, currentField, sortDirection }) => {
 
 const CompaniesPage = () => {
   const { companies, loading, fetchCompanies } = useCompanyContext();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [sortField, setSortField] = useState('name');
@@ -144,13 +146,15 @@ const CompaniesPage = () => {
           <h1 className="text-3xl font-bold text-gray-900">Companies</h1>
           <p className="text-gray-600 mt-1">Manage and track all your company contacts</p>
         </div>
-        <button
-          onClick={() => navigate('/add-company')}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-        >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Add Company
-        </button>
+        {user?.role !== 'developer' && (
+          <button
+            onClick={() => navigate('/add-company')}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+          >
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Add Company
+          </button>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -335,15 +339,9 @@ const CompaniesPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => navigate(`/companies/${company.id}`)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
+                      className="text-blue-600 hover:text-blue-900"
                     >
                       View
-                    </button>
-                    <button
-                      onClick={() => navigate(`/companies/${company.id}/edit`)}
-                      className="text-indigo-600 hover:text-indigo-900"
-                    >
-                      Edit
                     </button>
                   </td>
                 </tr>
@@ -357,17 +355,22 @@ const CompaniesPage = () => {
             <BuildingOfficeIcon className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No companies</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Get started by creating a new company.
+              {user?.role === 'developer' 
+                ? 'No companies found matching your search criteria.' 
+                : 'Get started by creating a new company.'
+              }
             </p>
-            <div className="mt-6">
-              <button
-                onClick={() => navigate('/add-company')}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                Add Company
-              </button>
-            </div>
+            {user?.role !== 'developer' && (
+              <div className="mt-6">
+                <button
+                  onClick={() => navigate('/add-company')}
+                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Add Company
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

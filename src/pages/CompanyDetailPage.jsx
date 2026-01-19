@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCompanyContext } from '../hooks/useCompanyContext';
+import { useAuth } from '../hooks/useAuth';
 import { 
   BuildingOfficeIcon, 
   PhoneIcon, 
@@ -24,6 +25,7 @@ const CompanyDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getCompanyById, deleteCompanyAPI } = useCompanyContext();
+  const { user } = useAuth();
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
   
@@ -120,6 +122,7 @@ const CompanyDetailPage = () => {
           <h1 className="text-3xl font-bold text-gray-900">{company.name}</h1>
           <p className="text-gray-600 mt-1">Detailed information about {company.name}</p>
         </div>
+        {user?.role !== 'developer' && (
         <div className="flex space-x-3">
           <button
             onClick={() => navigate(`/companies/${id}/edit`)}
@@ -136,6 +139,7 @@ const CompanyDetailPage = () => {
             Delete
           </button>
         </div>
+        )}
       </div>
 
       {/* Company Overview */}
@@ -273,6 +277,7 @@ const CompanyDetailPage = () => {
                 <EnvelopeIcon className="h-5 w-5 mr-2" />
                 Send Email
               </button>
+              {user?.role !== 'developer' && (
               <button
                 onClick={() => navigate('/analytics')}
                 className="w-full flex items-center px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
@@ -280,6 +285,8 @@ const CompanyDetailPage = () => {
                 <ChartBarIcon className="h-5 w-5 mr-2" />
                 View Analytics
               </button>
+              )}
+              {user?.role !== 'developer' && (
               <button
                 onClick={() => navigate('/shortlisted')}
                 className="w-full flex items-center px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
@@ -287,6 +294,7 @@ const CompanyDetailPage = () => {
                 <UserGroupIcon className="h-5 w-5 mr-2" />
                 Add to Shortlist
               </button>
+              )}
             </div>
           </div>
         </div>

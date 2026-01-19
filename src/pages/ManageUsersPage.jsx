@@ -238,16 +238,25 @@ const ManageUsersPage = () => {
           <h1 className="text-3xl font-bold text-gray-900">Manage Users</h1>
           <p className="text-gray-600 mt-1">Manage employee accounts and permissions</p>
         </div>
-        <button
-          onClick={() => {
-            resetForm();
-            setShowModal(true);
-          }}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-        >
-          <UserPlusIcon className="h-5 w-5 mr-2" />
-          Add User
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => {
+              resetForm();
+              setShowModal(true);
+            }}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+          >
+            <UserPlusIcon className="h-5 w-5 mr-2" />
+            Add User
+          </button>
+          <button
+            onClick={() => window.location.href = '/create-developer'}
+            className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
+          >
+            <UserPlusIcon className="h-5 w-5 mr-2" />
+            Add Developer
+          </button>
+        </div>
       </div>
 
       {/* Filters and Search */}
