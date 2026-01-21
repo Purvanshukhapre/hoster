@@ -69,14 +69,6 @@ const EmployeeDashboardPage = () => {
           <h1 className="text-3xl font-bold text-gray-900">My Dashboard</h1>
           <p className="text-gray-600 mt-1">Welcome back, {user?.name}! Here's what's happening with your companies.</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <a 
-            href="/add-company" 
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200"
-          >
-            Add Company
-          </a>
-        </div>
       </div>
 
       {/* Stats Grid */}
@@ -113,32 +105,15 @@ const EmployeeDashboardPage = () => {
 
       {/* My Companies Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">My Companies</h3>
-          <a 
-            href="/compose-email" 
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors duration-200"
-          >
-            Compose Email
-          </a>
-        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">My Companies</h3>
         
         {employeeCompanies.length === 0 ? (
           <div className="text-center py-12">
             <BuildingOfficeIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No companies</h3>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No companies found</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Get started by adding a new company.
+              You haven't added any companies yet.
             </p>
-            <div className="mt-6">
-              <a 
-                href="/add-company"
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                Add Company
-              </a>
-            </div>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -160,7 +135,20 @@ const EmployeeDashboardPage = () => {
                 {employeeCompanies.slice(0, 5).map((company) => (
                   <tr key={company.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{company.name}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {company.website ? (
+                          <a 
+                            href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 underline"
+                          >
+                            {company.name}
+                          </a>
+                        ) : (
+                          <span>{company.name}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{company.email}</div>

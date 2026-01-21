@@ -317,7 +317,7 @@ const AddCompanyPage = () => {
                   <PhoneIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  type="tel"
+                  type="text"
                   id="phoneNumber"
                   name="phoneNumber"
                   value={formData.phoneNumber}
@@ -339,7 +339,7 @@ const AddCompanyPage = () => {
                   <PhoneIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  type="tel"
+                  type="text"
                   id="alternatePhoneNumber"
                   name="alternatePhoneNumber"
                   value={formData.alternatePhoneNumber}
