@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompanyContext } from '../hooks/useCompanyContext';
 import { 
@@ -13,8 +13,250 @@ import {
   ArrowLeftIcon,
   PlusIcon,
   XCircleIcon,
-  PaperClipIcon
+  PaperClipIcon,
+  TagIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
+import axios from 'axios';
+
+// Custom Searchable Dropdown Component
+const CustomCategoryDropdown = ({ 
+  availableCategories, 
+  selectedCategory, 
+  onSelectCategory, 
+  onAddNewCategory 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const dropdownRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Filter categories based on search term
+  const filteredCategories = availableCategories.filter(category =>
+    category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Check if the typed term doesn't match any existing category
+  const showCreateOption = searchTerm && 
+    !availableCategories.some(cat => 
+      cat.toLowerCase() === searchTerm.toLowerCase()
+    );
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setIsCreating(false);
+        setSearchTerm(selectedCategory || '');
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [selectedCategory]);
+
+  const handleInputFocus = () => {
+    setIsOpen(true);
+    setIsCreating(false);
+  };
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    // Only close dropdown if value is empty AND we're not in creation mode
+    if (!value && !isCreating) {
+      setIsOpen(false);
+      // Clear the selected category if user deletes all text
+      if (selectedCategory) {
+        onSelectCategory('');
+      }
+    } else if (value) {
+      setIsOpen(true);
+    }
+    
+    setIsCreating(false);
+  };
+
+  const handleCategorySelect = (category) => {
+    onSelectCategory(category);
+    setIsOpen(false);
+    setSearchTerm(category);
+    inputRef.current?.blur();
+  };
+
+  const handleCreateNew = () => {
+    if (searchTerm.trim()) {
+      onAddNewCategory(searchTerm.trim());
+      setIsOpen(false);
+      setSearchTerm(searchTerm.trim());
+      setIsCreating(false);
+      inputRef.current?.blur();
+    }
+  };
+
+  const handleInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (showCreateOption) {
+        handleCreateNew();
+      } else if (filteredCategories.length > 0) {
+        handleCategorySelect(filteredCategories[0]);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setSearchTerm(selectedCategory || '');
+      inputRef.current?.blur();
+    }
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <TagIcon className="h-5 w-5 text-gray-400" />
+      </div>
+      
+      {/* Dropdown Trigger Input */}
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={isCreating || isOpen ? searchTerm : (selectedCategory || '')}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
+          onKeyPress={handleInputKeyPress}
+          placeholder="Select or create a category"
+          className="w-full pl-10 pr-12 py-3 text-gray-900 border border-gray-300 rounded-lg
+                   bg-white appearance-none
+                   transition duration-200 ease-in-out
+                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                   hover:border-gray-400
+                   placeholder-gray-500"
+        />
+        
+        {/* Dropdown Arrow */}
+        <button
+          type="button"
+          onClick={() => {
+            if (isOpen) {
+              setIsOpen(false);
+              setSearchTerm(selectedCategory || '');
+            } else {
+              setIsOpen(true);
+              inputRef.current?.focus();
+            }
+          }}
+          className="absolute inset-y-0 right-0 flex items-center px-3
+                   text-gray-400 hover:text-gray-600
+                   transition-colors duration-150
+                   focus:outline-none"
+        >
+          <svg 
+            className={`h-5 w-5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            xmlns="http://www.w3.org/2000/svg" 
+            viewBox="0 0 20 20" 
+            fill="currentColor"
+          >
+            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg
+                     max-h-60 overflow-hidden
+                     transition-all duration-200 ease-in-out">
+          
+          {/* Search Input */}
+          {isCreating ? (
+            <div className="p-3 border-b border-gray-100">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleCreateNew();
+                  }
+                }}
+                placeholder="Enter new category name"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                autoFocus
+              />
+              <div className="flex justify-between mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreating(false);
+                    setSearchTerm(selectedCategory || '');
+                  }}
+                  className="text-sm text-gray-500 hover:text-gray-700 px-2 py-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateNew}
+                  disabled={!searchTerm.trim()}
+                  className="text-sm bg-blue-600 text-white px-3 py-1 rounded
+                           hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed
+                           transition-colors duration-150"
+                >
+                  Create
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="max-h-52 overflow-y-auto">
+              {/* Create New Option */}
+              {showCreateOption && (
+                <button
+                  type="button"
+                  onClick={() => setIsCreating(true)}
+                  className="w-full text-left px-4 py-3 text-sm text-blue-600 hover:bg-blue-50
+                           border-b border-gray-100 last:border-b-0
+                           transition-colors duration-150
+                           flex items-center"
+                >
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  Create "{searchTerm}"
+                </button>
+              )}
+
+              {/* Category List */}
+              {filteredCategories.length > 0 ? (
+                filteredCategories.map((category, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => handleCategorySelect(category)}
+                    className={`w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50
+                             border-b border-gray-100 last:border-b-0
+                             transition-colors duration-150
+                             ${category === selectedCategory ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
+                  >
+                    {category}
+                  </button>
+                ))
+              ) : (
+                !showCreateOption && (
+                  <div className="px-4 py-6 text-center text-sm text-gray-500">
+                    No categories found
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const AddCompanyPage = () => {
   const navigate = useNavigate();
@@ -28,12 +270,37 @@ const AddCompanyPage = () => {
     phoneNumber: '',
     alternatePhoneNumber: '',
     gstNumber: '',
-    panNumber: ''
+    panNumber: '',
+    categories: []
   });
   const [attachments, setAttachments] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [availableCategories, setAvailableCategories] = useState([]);
   const fileInputRef = useRef(null);
+
+  // Fetch available categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await axios.get('https://elitehoster-backend-production.up.railway.app/api/companies/categories', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.data && response.data.success && response.data.data) {
+          setAvailableCategories(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -94,6 +361,10 @@ const AddCompanyPage = () => {
     
     if (!formData.name.trim()) newErrors.name = 'Company name is required';
     if (!formData.website.trim()) newErrors.website = 'Website is required';
+    // Validate category - it's required
+    if (!formData.categories || formData.categories.length === 0 || !formData.categories[0]?.trim()) {
+      newErrors.category = 'Category is required';
+    }
     // Validate email if provided
     if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
@@ -146,6 +417,7 @@ const AddCompanyPage = () => {
         status: formData.status || 'New',
         industry: 'Technology', // Required field by backend
         tags: '', // Optional field
+        categories: formData.categories && formData.categories.length > 0 && formData.categories[0] ? [formData.categories[0]] : [], // Send as array with single category
         personName: formData.personName || '',
         phoneNumber: formData.phoneNumber || '',
         alternatePhoneNumber: formData.alternatePhoneNumber || '',
@@ -155,10 +427,42 @@ const AddCompanyPage = () => {
       
       // Only add uploadDocument if there are actual files to upload
       if (attachments.length > 0) {
-        companyData.uploadDocument = attachments.map(attachment => attachment.file);
+        // If there are attachments, use FormData to handle both files and categories properly
+        const formDataToSend = new FormData();
+        
+        // Add all text fields to FormData
+        formDataToSend.append('companyName', companyData.companyName);
+        formDataToSend.append('companyEmail', companyData.companyEmail);
+        formDataToSend.append('contactPerson', companyData.contactPerson);
+        formDataToSend.append('websiteUrl', companyData.websiteUrl);
+        formDataToSend.append('industry', companyData.industry);
+        formDataToSend.append('tags', companyData.tags);
+        formDataToSend.append('status', companyData.status);
+        // Append categories as an array element - the API service will handle this properly
+        // We'll let the API service handle the categories field
+        formDataToSend.append('personName', companyData.personName);
+        formDataToSend.append('phoneNumber', companyData.phoneNumber);
+        formDataToSend.append('alternatePhoneNumber', companyData.alternatePhoneNumber);
+        formDataToSend.append('gstNumber', companyData.gstNumber);
+        formDataToSend.append('panNumber', companyData.panNumber);
+        
+        // Add document uploads
+        attachments.forEach((attachment) => {
+          if (attachment.file instanceof File) {
+            formDataToSend.append('uploadDocument', attachment.file, attachment.name);
+          }
+        });
+        
+        // Call the API with FormData - the API service will handle categories properly
+        await addCompanyAPI(formDataToSend);
+      } else {
+        // No attachments, send as regular object - ensure categories is properly formatted
+        const finalCompanyData = {
+          ...companyData,
+          categories: companyData.categories && companyData.categories.length > 0 ? companyData.categories : []
+        };
+        await addCompanyAPI(finalCompanyData);
       }
-      
-      await addCompanyAPI(companyData);
       
       // If there are attachments, we might need to handle them separately
       // For now, just navigate to companies list
@@ -284,6 +588,31 @@ const AddCompanyPage = () => {
                 <option value="Shortlisted">Shortlisted</option>
                 <option value="Rejected">Rejected</option>
               </select>
+            </div>
+
+            {/* Categories - Modern Searchable Dropdown */}
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                Category *
+              </label>
+              <CustomCategoryDropdown
+                availableCategories={availableCategories}
+                selectedCategory={formData.categories[0] || ''}
+                onSelectCategory={(category) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    categories: category ? [category] : []
+                  }));
+                }}
+                onAddNewCategory={(category) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    categories: [category]
+                  }));
+                  setAvailableCategories(prev => [...prev, category]);
+                }}
+              />
+              {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
             </div>
 
             {/* Person Name */}

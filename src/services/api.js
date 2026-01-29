@@ -98,6 +98,9 @@ export const companyAPI = {
   // Get all companies
   getCompanies: () => api.get('/companies'),
   
+  // Get all company categories
+  getCompanyCategories: () => api.get('/companies/categories'),
+  
   // Get company by ID
   getCompanyById: (id) => api.get(`/companies/${id}`),
   
@@ -121,6 +124,14 @@ export const companyAPI = {
       formData.append('alternatePhoneNumber', companyData.alternatePhoneNumber || '');
       formData.append('gstNumber', companyData.gstNumber || '');
       formData.append('panNumber', companyData.panNumber || '');
+      // Add categories field
+      if (companyData.categories && Array.isArray(companyData.categories) && companyData.categories.length > 0) {
+        formData.append('categories', JSON.stringify(companyData.categories));
+      }
+      // Add categories field
+      if (companyData.categories && Array.isArray(companyData.categories) && companyData.categories.length > 0) {
+        formData.append('categories', JSON.stringify(companyData.categories));
+      }
       
       // Add document uploads - append each file individually
       companyData.attachments.forEach((document) => {
@@ -149,7 +160,9 @@ export const companyAPI = {
         phoneNumber: companyData.phoneNumber || '',
         alternatePhoneNumber: companyData.alternatePhoneNumber || '',
         gstNumber: companyData.gstNumber || '',
-        panNumber: companyData.panNumber || ''
+        panNumber: companyData.panNumber || '',
+        // Add categories field
+        categories: companyData.categories || []
       };
       
       // Remove undefined values to avoid issues with backend
@@ -184,6 +197,11 @@ export const companyAPI = {
       formData.append('gstNumber', companyData.gstNumber || '');
       formData.append('panNumber', companyData.panNumber || '')
       
+      // Add categories field
+      if (companyData.categories && Array.isArray(companyData.categories) && companyData.categories.length > 0) {
+        formData.append('categories', JSON.stringify(companyData.categories));
+      }
+      
       // Add document uploads - append each file individually
       companyData.attachments.forEach((document) => {
         if (document instanceof File) {
@@ -211,7 +229,9 @@ export const companyAPI = {
         phoneNumber: companyData.phoneNumber || '',
         alternatePhoneNumber: companyData.alternatePhoneNumber || '',
         gstNumber: companyData.gstNumber || '',
-        panNumber: companyData.panNumber || ''
+        panNumber: companyData.panNumber || '',
+        // Add categories field
+        categories: companyData.categories || []
       };
       
       // Remove undefined values to avoid issues with backend

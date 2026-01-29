@@ -51,7 +51,8 @@ const CompanyDetailsPage = () => {
             dateAdded: response.data.data.dateAdded || response.data.data.createdAt || new Date().toISOString().split('T')[0],
             industry: response.data.data.industry || 'N/A',
             status: response.data.data.status || 'Unknown',
-            description: response.data.data.description || 'No description'
+            description: response.data.data.description || 'No description',
+            categories: response.data.data.categories || [] // Include categories from API response
           };
           
           setCompany(companyData);
@@ -201,6 +202,15 @@ const CompanyDetailsPage = () => {
                     <div className="flex justify-between">
                       <dt className="text-sm text-gray-600">Industry</dt>
                       <dd className="text-sm text-gray-900">{company.industry}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm text-gray-600">Categories</dt>
+                      <dd className="text-sm text-gray-900">
+                        {company.categories && company.categories.length > 0
+                          ? company.categories.join(', ')
+                          : 'N/A'
+                        }
+                      </dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-sm text-gray-600">Website</dt>

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompanyContext } from '../hooks/useCompanyContext';
 import { useAuth } from '../hooks/useAuth';
+import api from '../services/api';
 import { 
   BuildingOfficeIcon, 
   PhoneIcon, 
@@ -14,10 +15,130 @@ import {
   PlusIcon,
   MagnifyingGlassIcon,
   ChevronDownIcon,
-  FunnelIcon,
+  ChevronUpIcon,
+  CheckIcon,
   XCircleIcon,
   HeartIcon
 } from '@heroicons/react/24/outline';
+
+const CategoryFilter = ({ 
+  categories, 
+  selectedCategory, 
+  onChange 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (category) => {
+    onChange(category);
+    setIsOpen(false);
+    setSearchTerm('');
+  };
+
+  const getDisplayText = () => {
+    if (!selectedCategory) return 'All';
+    return selectedCategory;
+  };
+
+  const filteredCategories = categories.filter(category => 
+    category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="relative inline-block" ref={dropdownRef}>
+      {/* Filter Trigger */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px]"
+      >
+        <span className="text-gray-400">🏷</span>
+        <span>Category</span>
+        <span className="text-gray-400">·</span>
+        <span className="text-gray-900 truncate">{getDisplayText()}</span>
+        <ChevronDownIcon className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Dropdown Panel */}
+      {isOpen && (
+        <div className="absolute z-[1000] mt-2 w-[300px] max-w-[90vw] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200 right-0">
+          {/* Panel Header */}
+          <div className="p-4 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Filter by Category</h3>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search categories..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Category List */}
+          <div className="max-h-[320px] overflow-y-auto overflow-x-hidden py-2">
+            <button
+              key=""
+              type="button"
+              onClick={() => handleSelect('')}
+              className={`flex items-center w-full px-4 py-3 text-left text-sm transition-colors duration-150 ${
+                selectedCategory === '' 
+                  ? 'bg-blue-50 text-blue-700 font-medium' 
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {selectedCategory === '' && (
+                <CheckIcon className="h-4 w-4 text-blue-600 mr-3 flex-shrink-0" />
+              )}
+              <span className="truncate">All Categories</span>
+            </button>
+            
+            {filteredCategories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                onClick={() => handleSelect(category)}
+                className={`flex items-center w-full px-4 py-3 text-left text-sm transition-colors duration-150 ${
+                  selectedCategory === category 
+                    ? 'bg-blue-50 text-blue-700 font-medium' 
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {selectedCategory === category && (
+                  <CheckIcon className="h-4 w-4 text-blue-600 mr-3 flex-shrink-0" />
+                )}
+                <span className="truncate">{category}</span>
+              </button>
+            ))}
+            
+            {filteredCategories.length === 0 && searchTerm && (
+              <div className="px-4 py-6 text-center text-sm text-gray-500">
+                No categories found
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const SortIndicator = ({ sortField, currentField, sortDirection }) => {
   if (sortField !== currentField) return null;
@@ -35,6 +156,8 @@ const CompaniesPage = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [sortField, setSortField] = useState('name');
 
   const [sortDirection, setSortDirection] = useState('asc');
@@ -43,6 +166,27 @@ const CompaniesPage = () => {
   useEffect(() => {
     fetchCompanies();
   }, [fetchCompanies]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get('/companies/categories');
+        console.log('Category API response status:', response.status);
+        console.log('Category API response data:', response.data);
+        console.log('Categories from response.data.data:', response.data.data);
+        setCategories(response.data.data || []);
+        console.log('Fetched categories:', response.data.data || []);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+        if (error.response) {
+          console.error('Error response status:', error.response.status);
+          console.error('Error response data:', error.response.data);
+        }
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const filteredCompanies = useMemo(() => {
     let filtered = companies || [];
@@ -59,6 +203,15 @@ const CompaniesPage = () => {
     // Apply status filter
     if (filterStatus !== 'All') {
       filtered = filtered.filter(company => company.status === filterStatus);
+    }
+
+    // Apply category filter
+    if (selectedCategory) {
+      filtered = filtered.filter(company => 
+        company.categories && 
+        Array.isArray(company.categories) && 
+        company.categories.includes(selectedCategory)
+      );
     }
 
     // Apply sorting - create a copy to avoid mutating the original array
@@ -92,7 +245,7 @@ const CompaniesPage = () => {
     }
 
     return sortedFiltered;
-  }, [companies, searchTerm, filterStatus, sortField, sortDirection]);
+  }, [companies, searchTerm, filterStatus, selectedCategory, sortField, sortDirection]);
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -234,7 +387,7 @@ const CompaniesPage = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="block px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="block px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-400 transition-colors duration-200 text-gray-700 font-medium"
             >
               <option value="All">All Status</option>
               <option value="New">New</option>
@@ -244,10 +397,11 @@ const CompaniesPage = () => {
               <option value="Rejected">Rejected</option>
             </select>
             
-            <button className="flex items-center px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-              <FunnelIcon className="h-5 w-5 text-gray-600 mr-2" />
-              Filter
-            </button>
+            <CategoryFilter
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onChange={setSelectedCategory}
+            />
           </div>
         </div>
       </div>
@@ -279,7 +433,11 @@ const CompaniesPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Contact Info
                 </th>
-
+                
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
+                
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('status')}
@@ -327,6 +485,14 @@ const CompaniesPage = () => {
                         <MapPinIcon className="h-3 w-3 mr-1 text-gray-400" />
                         {company.location}
                       </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {company.categories && company.categories.length > 0
+                        ? company.categories.join(', ')
+                        : '—'
+                      }
                     </div>
                   </td>
 

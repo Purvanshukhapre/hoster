@@ -34,7 +34,8 @@ const normalizeCompany = (company) => {
     dateAdded: company.dateAdded || company.createdAt || company.created_at || new Date().toISOString().split('T')[0],
     industry: company.industry || company.company_industry || 'N/A',
     status: company.status || company.state || company.company_status || 'Unknown',
-    description: company.description || 'No description'
+    description: company.description || 'No description',
+    categories: company.categories || [] // Include categories from API response
   };
 };
 
