@@ -18,7 +18,8 @@ import {
   ChevronUpIcon,
   CheckIcon,
   XCircleIcon,
-  HeartIcon
+  HeartIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 
 const CategoryFilter = ({ 
@@ -448,6 +449,9 @@ const CompaniesPage = () => {
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Document
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
 
@@ -501,6 +505,21 @@ const CompaniesPage = () => {
                       {getStatusIcon(company.status)}
                       <span className="ml-1">{company.status}</span>
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {company.uploadDocument ? (
+                      <a 
+                        href={company.uploadDocument} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm"
+                      >
+                        <DocumentTextIcon className="h-4 w-4 mr-1" />
+                        View PDF
+                      </a>
+                    ) : (
+                      <span className="text-gray-400 text-sm">No document</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button

@@ -7,9 +7,7 @@ const API_BASE_URL = 'https://elitehoster-backend-production.up.railway.app/api'
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000, // 30 seconds timeout
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // Don't set Content-Type header here - let browser set it automatically for FormData
 });
 
 // Request interceptor to add auth token if available
@@ -42,6 +40,9 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API Error:', error);
+    console.error('Error response data:', error.response?.data);
+    console.error('Error status:', error.response?.status);
+    console.error('Error headers:', error.response?.headers);
     
     if (error.response?.status === 401) {
       // Clear auth data if unauthorized
@@ -104,10 +105,38 @@ export const companyAPI = {
   // Get company by ID
   getCompanyById: (id) => api.get(`/companies/${id}`),
   
-  // Add a new company
+  // Add a new company - always uses FormData
   addCompany: (companyData) => {
-    // Check if there are documents to handle as multipart form data
-    if (companyData.attachments && Array.isArray(companyData.attachments) && companyData.attachments.length > 0) {
+    // Always expect FormData - never JSON
+    console.log('API layer FormData check - instanceof FormData:', companyData instanceof FormData);
+    console.log('API layer FormData check - constructor name:', companyData.constructor.name);
+    console.log('API layer FormData entries count:', Array.from(companyData.entries()).length);
+    
+    if (!(companyData instanceof FormData)) {
+      const error = new Error(`AddCompany API requires FormData, got ${typeof companyData} (${companyData.constructor.name})`);
+      console.error('FormData validation error:', error);
+      throw error;
+    }
+    
+    // Send FormData directly - let browser handle Content-Type with proper boundary
+    return api.post('/companies', companyData, {
+      headers: {
+        // Content-Type will be automatically set by the browser with the correct boundary
+      },
+    });
+  },
+  
+  // Update a company
+  updateCompany: (id, companyData) => {
+    // Check if companyData is FormData (when files are uploaded) or if it has attachments array
+    if (companyData instanceof FormData) {
+      // companyData is already a FormData object, use it directly
+      return api.put(`/companies/${id}`, companyData, {
+        headers: {
+          // Content-Type will be automatically set by the browser with the correct boundary
+        },
+      });
+    } else if (companyData.attachments && Array.isArray(companyData.attachments) && companyData.attachments.length > 0) {
       const formData = new FormData();
       
       // Add all fields to form data according to backend expectations
@@ -124,78 +153,6 @@ export const companyAPI = {
       formData.append('alternatePhoneNumber', companyData.alternatePhoneNumber || '');
       formData.append('gstNumber', companyData.gstNumber || '');
       formData.append('panNumber', companyData.panNumber || '');
-      // Add categories field
-      if (companyData.categories && Array.isArray(companyData.categories) && companyData.categories.length > 0) {
-        formData.append('categories', JSON.stringify(companyData.categories));
-      }
-      // Add categories field
-      if (companyData.categories && Array.isArray(companyData.categories) && companyData.categories.length > 0) {
-        formData.append('categories', JSON.stringify(companyData.categories));
-      }
-      
-      // Add document uploads - append each file individually
-      companyData.attachments.forEach((document) => {
-        if (document instanceof File) {
-          formData.append('uploadDocument', document, document.name);
-        }
-      });
-      
-      return api.post('/companies', formData, {
-        headers: {
-          // Content-Type will be automatically set by the browser with the correct boundary
-        },
-      });
-    } else {
-      // No documents, send as regular JSON
-      const backendData = {
-        companyName: companyData.companyName || '',
-        companyEmail: companyData.companyEmail || '',
-        contactPerson: companyData.contactPerson || 'N/A',
-        websiteUrl: companyData.websiteUrl || '',
-        industry: companyData.industry || 'Technology',
-        tags: companyData.tags || '',
-        status: companyData.status || 'New',
-        // Add new fields
-        personName: companyData.personName || '',
-        phoneNumber: companyData.phoneNumber || '',
-        alternatePhoneNumber: companyData.alternatePhoneNumber || '',
-        gstNumber: companyData.gstNumber || '',
-        panNumber: companyData.panNumber || '',
-        // Add categories field
-        categories: companyData.categories || []
-      };
-      
-      // Remove undefined values to avoid issues with backend
-      Object.keys(backendData).forEach(key => {
-        if (backendData[key] === undefined) {
-          delete backendData[key];
-        }
-      });
-      
-      return api.post('/companies', backendData);
-    }
-  },
-  
-  // Update a company
-  updateCompany: (id, companyData) => {
-    // Check if there are documents to handle as multipart form data
-    if (companyData.attachments && Array.isArray(companyData.attachments) && companyData.attachments.length > 0) {
-      const formData = new FormData();
-      
-      // Add all fields to form data according to backend expectations
-      formData.append('companyName', companyData.companyName || '');
-      formData.append('companyEmail', companyData.companyEmail || '');
-      formData.append('contactPerson', companyData.contactPerson || 'N/A');
-      formData.append('websiteUrl', companyData.websiteUrl || '');
-      formData.append('industry', companyData.industry || 'Technology');
-      formData.append('tags', companyData.tags || '');
-      formData.append('status', companyData.status || 'New');
-      // Add new fields
-      formData.append('personName', companyData.personName || '');
-      formData.append('phoneNumber', companyData.phoneNumber || '');
-      formData.append('alternatePhoneNumber', companyData.alternatePhoneNumber || '');
-      formData.append('gstNumber', companyData.gstNumber || '');
-      formData.append('panNumber', companyData.panNumber || '')
       
       // Add categories field
       if (companyData.categories && Array.isArray(companyData.categories) && companyData.categories.length > 0) {
@@ -290,7 +247,7 @@ export const emailAPI = {
     
     return api.post('/mails/send-single', formData, {
       headers: {
-        'Content-Type': 'multipart/form-data', // Explicitly set for file uploads
+        // Content-Type will be automatically set by the browser with the correct boundary
       },
     });
   },
@@ -318,7 +275,7 @@ export const emailAPI = {
     
     return api.post('/mails/send-group', formData, {
       headers: {
-        'Content-Type': 'multipart/form-data', // Explicitly set for file uploads
+        // Content-Type will be automatically set by the browser with the correct boundary
       },
     });
   },

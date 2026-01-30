@@ -17,7 +17,7 @@ import {
   TagIcon,
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
-import axios from 'axios';
+import { companyAPI } from '../services/api';
 
 // Custom Searchable Dropdown Component
 const CustomCategoryDropdown = ({ 
@@ -230,9 +230,9 @@ const CustomCategoryDropdown = ({
 
               {/* Category List */}
               {filteredCategories.length > 0 ? (
-                filteredCategories.map((category, index) => (
+                filteredCategories.map((category) => (
                   <button
-                    key={index}
+                    key={category}
                     type="button"
                     onClick={() => handleCategorySelect(category)}
                     className={`w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50
@@ -284,18 +284,33 @@ const AddCompanyPage = () => {
     const fetchCategories = async () => {
       try {
         const token = localStorage.getItem('authToken');
-        const response = await axios.get('https://elitehoster-backend-production.up.railway.app/api/companies/categories', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        
+        // Check if user is authenticated
+        if (!token) {
+          console.warn('No auth token found, cannot fetch categories');
+          return;
+        }
+        
+        const response = await companyAPI.getCompanyCategories();
+        
+        console.log('Categories API response:', response.data);
         
         if (response.data && response.data.success && response.data.data) {
           setAvailableCategories(response.data.data);
+          console.log('Available categories set:', response.data.data);
+        } else {
+          console.warn('Unexpected categories response format:', response.data);
+          // Set some default categories if the API response is unexpected
+          setAvailableCategories(['Technology', 'Healthcare', 'Finance', 'Education', 'Retail']);
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
+        console.error('Categories error response:', error.response?.data);
+        console.error('Categories error status:', error.response?.status);
+        
+        // Provide fallback categories if API call fails
+        console.warn('Using fallback categories due to API error');
+        setAvailableCategories(['Technology', 'Healthcare', 'Finance', 'Education', 'Retail']);
       }
     };
 
@@ -426,49 +441,59 @@ const AddCompanyPage = () => {
       };
       
       // Only add uploadDocument if there are actual files to upload
-      if (attachments.length > 0) {
-        // If there are attachments, use FormData to handle both files and categories properly
-        const formDataToSend = new FormData();
-        
-        // Add all text fields to FormData
-        formDataToSend.append('companyName', companyData.companyName);
-        formDataToSend.append('companyEmail', companyData.companyEmail);
-        formDataToSend.append('contactPerson', companyData.contactPerson);
-        formDataToSend.append('websiteUrl', companyData.websiteUrl);
-        formDataToSend.append('industry', companyData.industry);
-        formDataToSend.append('tags', companyData.tags);
-        formDataToSend.append('status', companyData.status);
-        // Append categories as an array element - the API service will handle this properly
-        // We'll let the API service handle the categories field
-        formDataToSend.append('personName', companyData.personName);
-        formDataToSend.append('phoneNumber', companyData.phoneNumber);
-        formDataToSend.append('alternatePhoneNumber', companyData.alternatePhoneNumber);
-        formDataToSend.append('gstNumber', companyData.gstNumber);
-        formDataToSend.append('panNumber', companyData.panNumber);
-        
-        // Add document uploads
-        attachments.forEach((attachment) => {
-          if (attachment.file instanceof File) {
-            formDataToSend.append('uploadDocument', attachment.file, attachment.name);
-          }
+      // Always use FormData for Add Company API - required by backend
+      const formDataToSend = new FormData();
+      
+      // Add all text fields to FormData
+      formDataToSend.append('companyName', companyData.companyName);
+      formDataToSend.append('companyEmail', companyData.companyEmail);
+      formDataToSend.append('contactPerson', companyData.contactPerson);
+      formDataToSend.append('websiteUrl', companyData.websiteUrl);
+      formDataToSend.append('industry', companyData.industry);
+      formDataToSend.append('tags', companyData.tags);
+      formDataToSend.append('status', companyData.status);
+      
+      // Append categories field as array - field-by-field as required
+      if (companyData.categories && Array.isArray(companyData.categories)) {
+        companyData.categories.forEach(category => {
+          formDataToSend.append('categories', category);
         });
-        
-        // Call the API with FormData - the API service will handle categories properly
-        await addCompanyAPI(formDataToSend);
-      } else {
-        // No attachments, send as regular object - ensure categories is properly formatted
-        const finalCompanyData = {
-          ...companyData,
-          categories: companyData.categories && companyData.categories.length > 0 ? companyData.categories : []
-        };
-        await addCompanyAPI(finalCompanyData);
       }
+      
+      // Add additional company fields
+      formDataToSend.append('personName', companyData.personName);
+      formDataToSend.append('phoneNumber', companyData.phoneNumber);
+      formDataToSend.append('alternatePhoneNumber', companyData.alternatePhoneNumber);
+      formDataToSend.append('gstNumber', companyData.gstNumber);
+      formDataToSend.append('panNumber', companyData.panNumber);
+      
+      // Add document uploads if any - as File objects under uploadDocument key
+      attachments.forEach((attachment) => {
+        if (attachment.file instanceof File) {
+          formDataToSend.append('uploadDocument', attachment.file, attachment.name);
+        }
+      });
+      
+      // Runtime check: ensure we're passing a real FormData instance
+      console.log('FormData check - instanceof FormData:', formDataToSend instanceof FormData);
+      console.log('FormData check - constructor name:', formDataToSend.constructor.name);
+      console.log('FormData entries:', Array.from(formDataToSend.entries()));
+      
+      if (!(formDataToSend instanceof FormData)) {
+        throw new Error(`Expected FormData instance, got ${typeof formDataToSend} (${formDataToSend.constructor.name})`);
+      }
+      
+      // Always send FormData - never JSON
+      await addCompanyAPI(formDataToSend);
       
       // If there are attachments, we might need to handle them separately
       // For now, just navigate to companies list
       navigate('/companies');
     } catch (error) {
       console.error('Error adding company:', error);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      console.error('Error headers:', error.response?.headers);
       // Extract error message from response if available
       const errorMessage = error.response?.data?.message || error.message || 'Failed to add company. Please try again.';
       setErrors({ submit: errorMessage });
@@ -499,7 +524,7 @@ const AddCompanyPage = () => {
             {/* Company Name */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                Company Name *
+                Company Name 
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -525,7 +550,7 @@ const AddCompanyPage = () => {
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email *
+                Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -646,14 +671,13 @@ const AddCompanyPage = () => {
                   <PhoneIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  type="text"
+                  type="string"
                   id="phoneNumber"
                   name="phoneNumber"
                   value={formData.phoneNumber}
                   onChange={handleChange}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter primary phone number"
-                  pattern="[0-9]*"
                 />
               </div>
             </div>
@@ -668,14 +692,13 @@ const AddCompanyPage = () => {
                   <PhoneIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  type="text"
+                  type="string"
                   id="alternatePhoneNumber"
                   name="alternatePhoneNumber"
                   value={formData.alternatePhoneNumber}
                   onChange={handleChange}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter alternate phone number"
-                  pattern="[0-9]*"
                 />
               </div>
             </div>

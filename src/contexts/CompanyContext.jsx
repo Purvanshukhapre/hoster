@@ -285,15 +285,21 @@ export const CompanyProvider = ({ children }) => {
     
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      // Automatically set the creator when adding a company
-      const companyDataWithCreator = {
-        ...companyData,
-        creatorId: user.id,
-        createdBy: user.id,
-        creator: user.id
-      };
+      // Runtime check: ensure we received a real FormData instance
+      console.log('CompanyContext FormData check - instanceof FormData:', companyData instanceof FormData);
+      console.log('CompanyContext FormData check - constructor name:', companyData.constructor.name);
       
-      const response = await companyAPI.addCompany(companyDataWithCreator);
+      if (!(companyData instanceof FormData)) {
+        throw new Error(`CompanyContext expected FormData instance, got ${typeof companyData} (${companyData.constructor.name})`);
+      }
+      
+      // For FormData, we need to append creator info directly to the FormData object
+      // Do NOT spread FormData - it loses its special properties
+      companyData.append('creatorId', user.id);
+      companyData.append('createdBy', user.id);
+      companyData.append('creator', user.id);
+      
+      const response = await companyAPI.addCompany(companyData);
       
       // Refetch companies to update the list
       const updatedResponse = await companyAPI.getCompanies();
@@ -331,6 +337,8 @@ export const CompanyProvider = ({ children }) => {
       return response.data;
     } catch (error) {
       console.error('Error adding company:', error);
+      console.error('CompanyContext error response data:', error.response?.data);
+      console.error('CompanyContext error status:', error.response?.status);
       // Check if the error has response data with specific message
       if (error.response?.data?.message) {
         error.message = error.response.data.message;

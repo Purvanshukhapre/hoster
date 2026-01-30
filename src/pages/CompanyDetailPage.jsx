@@ -212,21 +212,28 @@ const CompanyDetailPage = () => {
                     <MapPinIcon className="h-5 w-5 text-gray-400 mr-3" />
                     <p className="text-sm text-gray-900">{company.location}</p>
                   </div>
+                  {/* Display PDF Document if available */}
+                  {company.uploadDocument && (
+                    <div className="flex items-center">
+                      <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-3" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Company Document</p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <a 
+                            href={company.uploadDocument} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 underline"
+                          >
+                            View PDF Document
+                          </a>
+                          <span className="text-xs text-gray-500">(opens in new tab)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Notes Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Notes</h3>
-            <div className="relative">
-              <div className="absolute top-3 left-3">
-                <DocumentTextIcon className="h-5 w-5 text-gray-400" />
-              </div>
-              <p className="pl-10 text-gray-700">
-                {company.notes || 'No notes available for this company.'}
-              </p>
             </div>
           </div>
         </div>
